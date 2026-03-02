@@ -299,7 +299,7 @@ export default function CheckoutScreen() {
             value={`$${buyerFee.toFixed(2)}`}
           />
 
-          <Row label="Tax and Compliance" value={`$${tax.toFixed(2)}`} />
+          <Row label="Sales Tax and Compliance Fee (7.5%)" value={`$${tax.toFixed(2)}`} />
 
           <View style={styles.divider} />
 

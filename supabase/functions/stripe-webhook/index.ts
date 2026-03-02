@@ -116,8 +116,37 @@ async function markOrderPaid(params: {
   const escrowAmountCents =
     order.item_price_cents + (order.shipping_amount_cents ?? 0)
 
-  const sellerFeeCents = Math.round(escrowAmountCents * 0.04)
-  const sellerNetCents = escrowAmountCents - sellerFeeCents
+  // 🔥 Fetch seller Pro status (DO NOT change escrow math)
+const { data: sellerProfile, error: sellerErr } = await supabase
+  .from("profiles")
+  .select("is_pro")
+  .eq("id", order.seller_id)
+  .single()
+
+if (sellerErr) {
+  console.error("❌ Failed to fetch seller profile for fee calc:", sellerErr)
+  return json(500, { error: "Seller profile fetch failed" })
+}
+
+// 🎯 Dynamic Melo seller fee
+// Pro = 3.5%
+// Free = 5%
+// (Fee applies to item + shipping as per your architecture)
+const isProSeller = sellerProfile?.is_pro === true
+const sellerFeeRate = isProSeller ? 0.035 : 0.05
+
+const sellerFeeCents = Math.round(escrowAmountCents * sellerFeeRate)
+const sellerNetCents = escrowAmountCents - sellerFeeCents
+
+console.log("💰 Dynamic seller fee applied", {
+  orderId,
+  seller_id: order.seller_id,
+  is_pro: isProSeller,
+  fee_rate: sellerFeeRate,
+  escrow_amount_cents: escrowAmountCents,
+  seller_fee_cents: sellerFeeCents,
+  seller_net_cents: sellerNetCents,
+})
 
   console.log("🧮 Escrow calculation (fee includes shipping, excludes tax)", {
     orderId,
@@ -348,8 +377,9 @@ async function activateMeloPro(params: {
       boosts_remaining: newBoostTotal,
       mega_boosts_remaining: newMegaBoostTotal,
 
-      // 🧠 Only update reset timestamp IF we actually granted credits
+     // 🧠 Only update reset timestamps IF we actually granted credits
       last_boost_reset: grantCredits ? nowIso : profile.last_boost_reset,
+      last_mega_boost_reset: grantCredits ? nowIso : profile.last_mega_boost_reset ?? nowIso,
 
       stripe_customer_id: stripeCustomerId ?? null,
       stripe_subscription_id: subscriptionId ?? null,

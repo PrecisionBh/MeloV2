@@ -35,7 +35,7 @@ type Listing = {
   allow_offers: boolean
   shipping_type: "free" | "buyer_pays"
   shipping_price: number | null
-  quantity_available: number // 🔥 ADD THIS
+  quantity_available: number
 }
 
 export default function ListingDetailScreen() {
@@ -85,21 +85,23 @@ export default function ListingDetailScreen() {
 
       const { data, error } = await supabase
         .from("listings")
-        .select(`
-  id,
-  user_id,
-  title,
-  description,
-  price,
-  brand,
-  condition,
-  category,
-  image_urls,
-  allow_offers,
-  shipping_type,
-  shipping_price,
-  quantity_available
-`)
+        .select(
+          `
+          id,
+          user_id,
+          title,
+          description,
+          price,
+          brand,
+          condition,
+          category,
+          image_urls,
+          allow_offers,
+          shipping_type,
+          shipping_price,
+          quantity_available
+        `
+        )
         .eq("id", id)
         .single()
 
@@ -164,8 +166,8 @@ export default function ListingDetailScreen() {
       }
 
       const buyerId = session.user.id
-      const sellerId = listing.user_id
-      if (buyerId === sellerId) return
+      const sellerUserId = listing.user_id
+      if (buyerId === sellerUserId) return
 
       let conversationId: string | null = null
 
@@ -173,7 +175,7 @@ export default function ListingDetailScreen() {
         .from("conversations")
         .select("id")
         .eq("user_one", buyerId)
-        .eq("user_two", sellerId)
+        .eq("user_two", sellerUserId)
         .limit(1)
 
       if (directError) throw directError
@@ -184,7 +186,7 @@ export default function ListingDetailScreen() {
         const { data: reverse, error: reverseError } = await supabase
           .from("conversations")
           .select("id")
-          .eq("user_one", sellerId)
+          .eq("user_one", sellerUserId)
           .eq("user_two", buyerId)
           .limit(1)
 
@@ -200,7 +202,7 @@ export default function ListingDetailScreen() {
           .from("conversations")
           .insert({
             user_one: buyerId,
-            user_two: sellerId,
+            user_two: sellerUserId,
           })
           .select("id")
           .single()
@@ -287,6 +289,15 @@ export default function ListingDetailScreen() {
     }
   }
 
+  /* ✅ VIEW PUBLIC PROFILE BUTTON */
+  const handleViewPublicProfile = () => {
+    if (!listing?.user_id) return
+    router.push({
+      pathname: "/public-profile/[userId]",
+      params: { userId: listing.user_id },
+    })
+  }
+
   /* ---------------- RENDER ---------------- */
 
   if (loading) {
@@ -328,7 +339,7 @@ export default function ListingDetailScreen() {
           </ScrollView>
         )}
 
-        {/* HEADER CARD */}
+        {/* HEADER CARD (UNCHANGED) */}
         <ListingHeaderCard
           sellerName={sellerName}
           isSellerPro={isSellerPro}
@@ -356,16 +367,27 @@ export default function ListingDetailScreen() {
           }
         />
 
-        <ListingDetailsSection
-  condition={listing.condition}
-  category={listing.category}
-  brand={listing.brand}
-  description={listing.description}
-  quantityAvailable={listing.quantity_available}
-  shippingPrice={listing.shipping_price}
-/>
+        {/* ✅ NEW: VIEW PUBLIC PROFILE BUTTON */}
+        <View style={styles.profileRow}>
+          <TouchableOpacity
+            style={styles.profileBtn}
+            onPress={handleViewPublicProfile}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="person-circle-outline" size={18} color="#0F1E17" />
+            <Text style={styles.profileBtnText}>View Profile</Text>
+          </TouchableOpacity>
+        </View>
 
-        {/* ✅ MOVED: MESSAGE SELLER BUTTON (NOW BELOW DETAILS) */}
+        <ListingDetailsSection
+          condition={listing.condition}
+          category={listing.category}
+          brand={listing.brand}
+          description={listing.description}
+          quantityAvailable={listing.quantity_available}
+          shippingPrice={listing.shipping_price}
+        />
+
         {!isSeller && (
           <View style={styles.messageRow}>
             <TouchableOpacity
@@ -424,6 +446,27 @@ const styles = StyleSheet.create({
     height: "100%",
     resizeMode: "contain",
   },
+
+  /* ✅ NEW PROFILE BUTTON ROW */
+  profileRow: {
+    marginHorizontal: 14,
+    marginTop: 10,
+  },
+  profileBtn: {
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#7FAF9B",
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileBtnText: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: "#0F1E17",
+  },
+
   messageRow: {
     marginHorizontal: 16,
     marginTop: 16,

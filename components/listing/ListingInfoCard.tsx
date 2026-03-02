@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons"
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
 type Props = {
+  sellerId?: string // ✅ OPTIONAL (prevents TS errors if parent isn't updated yet)
   sellerName: string | null
   isSellerPro?: boolean
 
@@ -24,9 +25,12 @@ type Props = {
   onToggleWatch: () => void
   onMakeOffer: () => void
   onBuyNow: () => void
+
+  onViewSellerProfile?: (sellerId: string) => void // ✅ OPTIONAL
 }
 
 export default function ListingInfoCard({
+  sellerId,
   sellerName,
   isSellerPro = false,
 
@@ -49,14 +53,25 @@ export default function ListingInfoCard({
   onToggleWatch,
   onMakeOffer,
   onBuyNow,
+
+  onViewSellerProfile,
 }: Props) {
   const isFreeShipping = shippingType === "free"
+  const canTapSeller = Boolean(sellerId && onViewSellerProfile)
 
   return (
     <View style={styles.card}>
       {/* SELLER ROW (TRUST FIRST - PREMIUM MARKETPLACE UX) */}
-      <View style={styles.sellerRow}>
-        <Text style={styles.sellerName}>
+      <TouchableOpacity
+        activeOpacity={canTapSeller ? 0.75 : 1}
+        onPress={() => {
+          if (sellerId && onViewSellerProfile) onViewSellerProfile(sellerId)
+        }}
+        disabled={!canTapSeller}
+        style={styles.sellerRow}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <Text style={[styles.sellerName, canTapSeller && styles.sellerNameLink]}>
           {sellerName ?? "Seller"}
         </Text>
 
@@ -65,7 +80,12 @@ export default function ListingInfoCard({
             <Text style={styles.proBadgeText}>MELO PRO</Text>
           </View>
         )}
-      </View>
+
+        {/* subtle cue it's clickable (only when sellerId exists) */}
+        {canTapSeller && (
+          <Ionicons name="chevron-forward" size={16} color="#6B8F7D" />
+        )}
+      </TouchableOpacity>
 
       {/* TITLE + HEART */}
       <View style={styles.titleRow}>
@@ -80,9 +100,7 @@ export default function ListingInfoCard({
             />
           </TouchableOpacity>
 
-          {likesCount > 0 && (
-            <Text style={styles.likesText}>{likesCount}</Text>
-          )}
+          {likesCount > 0 && <Text style={styles.likesText}>{likesCount}</Text>}
         </View>
       </View>
 
@@ -95,28 +113,18 @@ export default function ListingInfoCard({
           <Text style={styles.freeShippingText}>FREE SHIPPING</Text>
         </View>
       ) : (
-        <Text style={styles.shippingText}>
-          + ${shippingPrice ?? 0} shipping
-        </Text>
+        <Text style={styles.shippingText}>+ ${shippingPrice ?? 0} shipping</Text>
       )}
 
       {/* ACTION BUTTONS */}
       <View style={styles.actions}>
         {allowOffers && (
-          <TouchableOpacity
-            style={styles.offerBtn}
-            onPress={onMakeOffer}
-            activeOpacity={0.9}
-          >
+          <TouchableOpacity style={styles.offerBtn} onPress={onMakeOffer} activeOpacity={0.9}>
             <Text style={styles.offerText}>Make Offer</Text>
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity
-          style={styles.buyBtn}
-          onPress={onBuyNow}
-          activeOpacity={0.9}
-        >
+        <TouchableOpacity style={styles.buyBtn} onPress={onBuyNow} activeOpacity={0.9}>
           <Text style={styles.buyText}>Buy Now</Text>
         </TouchableOpacity>
       </View>
@@ -142,13 +150,7 @@ export default function ListingInfoCard({
 
 /* ---------- SUB COMPONENT ---------- */
 
-function DetailRow({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.detailRow}>
       <Text style={styles.detailLabel}>{label}</Text>
@@ -187,6 +189,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     color: "#0F1E17",
+  },
+
+  // ✅ subtle link cue (no underline, just brand tint)
+  sellerNameLink: {
+    color: "#2E5F4F",
   },
 
   /* 🟢 MELO PRO BADGE (GLOWING TRUST BADGE) */

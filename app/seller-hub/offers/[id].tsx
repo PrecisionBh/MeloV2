@@ -56,6 +56,7 @@ export default function SellerOfferDetailScreen() {
   const [saving, setSaving] = useState(false)
   const [counterAmount, setCounterAmount] = useState("")
   const [showCounter, setShowCounter] = useState(false)
+  const [isProSeller, setIsProSeller] = useState(false)
 
   useEffect(() => {
     if (!id || !session?.user?.id) {
@@ -107,6 +108,15 @@ export default function SellerOfferDetailScreen() {
     }
 
     setOffer(data)
+
+    // 🔥 Fetch seller Pro status (for accurate payout preview)
+const { data: profile } = await supabase
+  .from("profiles")
+  .select("is_pro")
+  .eq("id", data.seller_id)
+  .single()
+
+setIsProSeller(profile?.is_pro === true)
   } catch (err) {
     handleAppError(err, {
       fallbackMessage: "Failed to load offer details.",
@@ -142,8 +152,12 @@ const itemPrice = offer.current_amount * quantity
       ? offer.listings.shipping_price ?? 0
       : 0
 
-  // 4% seller fee ONLY (no buyer fees shown)
-  const sellerFee = Number((itemPrice * 0.04).toFixed(2))
+  // 🔥 Dynamic seller fee (MATCHES webhook logic exactly)
+// Pro = 3.5%
+// Free = 5%
+// Fee applies to item total (shipping already handled in payout calc)
+const sellerFeeRate = isProSeller ? 0.035 : 0.05
+const sellerFee = Number((itemPrice * sellerFeeRate).toFixed(2))
 
   // What seller actually earns
   const sellerPayout = Number(
@@ -464,9 +478,9 @@ const submitCounter = async () => {
             />
 
             <Row
-              label="Seller Fee (4%)"
-              value={`-$${sellerFee.toFixed(2)}`}
-            />
+  label={`Seller Fee (${isProSeller ? "3.5%" : "5%"})`}
+  value={`-$${sellerFee.toFixed(2)}`}
+/>
 
             <View style={styles.divider} />
 

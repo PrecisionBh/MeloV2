@@ -86,60 +86,66 @@ export default function HomeScreen() {
     setupPushTokenIfNeeded()
   }, [])
 
+  // 🚫 ADD BAN CHECK RIGHT HERE (EXACT LOCATION)
   useEffect(() => {
-  setupPushTokenIfNeeded()
-}, [])
+    const enforceBan = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
 
-// 🚫 ADD BAN CHECK RIGHT HERE (EXACT LOCATION)
-useEffect(() => {
-  const enforceBan = async () => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+        if (!user?.id) return
 
-      if (!user?.id) return
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("is_banned")
+          .eq("id", user.id)
+          .single()
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("is_banned")
-        .eq("id", user.id)
-        .single()
+        if (error) {
+          console.log("[HOME] Ban check error:", error.message)
+          return
+        }
 
-      if (error) {
-        console.log("[HOME] Ban check error:", error.message)
-        return
+        if (data?.is_banned === true) {
+          console.log("[HOME] 🚫 BANNED USER DETECTED ON HOME — SIGNING OUT")
+          await supabase.auth.signOut()
+
+          Alert.alert(
+            "Account Suspended",
+            "Your account has been suspended. Please contact support."
+          )
+
+          router.replace("/login") // or your auth route
+        }
+      } catch (err) {
+        console.log("[HOME] Ban enforcement failed:", err)
       }
-
-      if (data?.is_banned === true) {
-        console.log("[HOME] 🚫 BANNED USER DETECTED ON HOME — SIGNING OUT")
-        await supabase.auth.signOut()
-
-        Alert.alert(
-          "Account Suspended",
-          "Your account has been suspended. Please contact support."
-        )
-
-        router.replace("/login") // or your auth route
-      }
-    } catch (err) {
-      console.log("[HOME] Ban enforcement failed:", err)
     }
-  }
 
-  enforceBan()
-}, [])
+    enforceBan()
+  }, [])
 
   useFocusEffect(
     useCallback(() => {
-      loadListings()
-      checkUnreadMessages()
-      checkUnreadNotifications()
-    }, [])
+      const init = async () => {
+        // 🔥 Load listings first (what users actually see)
+        await loadListings()
+
+        // 🟡 Then fetch lightweight badge data in background
+        checkUnreadMessages()
+        checkUnreadNotifications()
+      }
+
+      init()
+    }, []) // ✅ REMOVED activeCategory dependency (restores fast pills)
   )
 
-    const loadListings = async () => {
-    setLoading(true)
+  const loadListings = async () => {
+    // 🔥 Only show spinner on cold start (keeps UI visible on refresh)
+    if (listings.length === 0) {
+      setLoading(true)
+    }
 
     try {
       const {
@@ -157,7 +163,6 @@ useEffect(() => {
         followedSellerIds =
           followsData?.map((f: any) => f.following_id) ?? []
 
-        // ✅ FIX: is_pro fetch MUST be inside if (user)
         const { data: proData, error: proErr } = await supabase
           .from("profiles")
           .select("is_pro")
@@ -170,15 +175,15 @@ useEffect(() => {
 
         setIsPro(proData?.is_pro === true)
       } else {
-        // ✅ IMPORTANT: prevent stale pro state + null user crash
         setIsPro(false)
       }
 
+      // 🔵 ORIGINAL MARKETPLACE FEED (SINGLE DATA SOURCE — STABLE)
       const { data, error } = await supabase
         .from("listings")
         .select(
-  "id,title,description,brand,price,category,condition,image_urls,allow_offers,shipping_type,is_sold,is_removed,user_id,is_boosted,boost_expires_at,is_mega_boost,mega_boost_expires_at"
-)
+          "id,title,description,brand,price,category,condition,image_urls,allow_offers,shipping_type,is_sold,is_removed,user_id,is_boosted,boost_expires_at,is_mega_boost,mega_boost_expires_at,created_at"
+        )
         .eq("status", "active")
         .eq("is_sold", false)
         .eq("is_removed", false)
@@ -199,12 +204,12 @@ useEffect(() => {
       const now = new Date().toISOString()
 
       // 👑 ACTIVE MEGA BOOSTS (highest tier visibility)
-const activeMegaBoostRows = validRows.filter(
-  (l) =>
-    l.is_mega_boost === true &&
-    l.mega_boost_expires_at &&
-    l.mega_boost_expires_at > now
-)
+      const activeMegaBoostRows = validRows.filter(
+        (l) =>
+          l.is_mega_boost === true &&
+          l.mega_boost_expires_at &&
+          l.mega_boost_expires_at > now
+      )
 
       const boostedRows = validRows.filter(
         (l) =>
@@ -290,19 +295,18 @@ const activeMegaBoostRows = validRows.filter(
 
       setListings(normalized)
 
-      // 👑 Normalize mega boost listings (separate pool for grid injection)
-const normalizedMegaBoosts: Listing[] = activeMegaBoostRows.map((l) => ({
-  id: l.id,
-  title: l.title,
-  price: Number(l.price),
-  category: l.category ?? "",
-  image_url: l.image_urls?.[0] ?? null,
-  allow_offers: l.allow_offers ?? false,
-  shipping_type: l.shipping_type ?? null,
-}))
+      const normalizedMegaBoosts: Listing[] =
+        activeMegaBoostRows.map((l) => ({
+          id: l.id,
+          title: l.title,
+          price: Number(l.price),
+          category: l.category ?? "",
+          image_url: l.image_urls?.[0] ?? null,
+          allow_offers: l.allow_offers ?? false,
+          shipping_type: l.shipping_type ?? null,
+        }))
 
-setMegaBoostListings(normalizedMegaBoosts)
-
+      setMegaBoostListings(normalizedMegaBoosts)
     } catch (err) {
       handleAppError(err, {
         fallbackMessage:
@@ -425,72 +429,69 @@ const checkUnreadNotifications = async () => {
     }
   }
 
-   /* ---------------- FILTERING (FIXED & STABLE) ---------------- */
+  /* ---------------- FILTERING (FIXED & STABLE) ---------------- */
 
-  const filteredListings = useMemo(() => {
-    let result = [...listings]
+const filteredListings = useMemo(() => {
+  let result = [...listings]
 
-    /* 🔎 GLOBAL SEARCH (TITLE + CATEGORY — SAFE FOR CURRENT LISTING TYPE) */
-    if (search.trim()) {
-      const q = search.toLowerCase().trim()
+  /* 🔎 GLOBAL SEARCH (TITLE + CATEGORY — SAFE FOR CURRENT LISTING TYPE) */
+  if (search.trim()) {
+    const q = search.toLowerCase().trim()
 
-      result = result.filter((l) => {
-        const title = (l.title ?? "").toLowerCase()
-        const category = (l.category ?? "").toLowerCase()
+    result = result.filter((l) => {
+      const title = (l.title ?? "").toLowerCase()
+      const category = (l.category ?? "").toLowerCase()
 
-        return (
-          title.includes(q) ||
-          category.includes(q)
-        )
-      })
-    }
+      return title.includes(q) || category.includes(q)
+    })
+  }
 
-    /* 🎯 CATEGORY FILTERING (MARKETPLACE-SAFE + CASE BUG FIX) */
-    if (activeCategory === "all") {
-      return result
-    }
+  /* ✅ SPECIAL FILTERS */
+  if (activeCategory === "all") {
+    return result
+  }
 
-    const active = (activeCategory ?? "").toLowerCase()
+  const active = (activeCategory ?? "").toLowerCase()
 
-    // 🧳 CASE PILL — matches: case, hard_case, soft_case
-    if (active === "case") {
-      return result.filter((l) => {
-        const cat = (l.category ?? "").toLowerCase()
-        return CASE_CATEGORIES.includes(cat) || cat.includes("case")
-      })
-    }
-
-    // 🎱 CUE PILL — matches all cue types
-    if (active === "cue") {
-      return result.filter((l) => {
-        const cat = (l.category ?? "").toLowerCase()
-        return CUE_CATEGORIES.includes(cat) || cat.includes("cue")
-      })
-    }
-
-    // 📦 OTHER PILL — everything not in known marketplace categories
-    if (active === "other") {
-      const knownCategories = [
-        ...CUE_CATEGORIES,
-        ...CASE_CATEGORIES,
-        "shaft",
-        "apparel",
-        "accessories",
-        "collectibles",
-      ]
-
-      return result.filter((l) => {
-        const cat = (l.category ?? "").toLowerCase()
-        return !knownCategories.includes(cat)
-      })
-    }
-
-    // 🔒 DEFAULT EXACT MATCH (for apparel, shaft, accessories, etc.)
+  // 🧳 CASE PILL — matches: case, hard_case, soft_case
+  if (active === "case") {
     return result.filter((l) => {
       const cat = (l.category ?? "").toLowerCase()
-      return cat === active
+      return CASE_CATEGORIES.includes(cat) || cat.includes("case")
     })
-  }, [listings, activeCategory, search])
+  }
+
+  // 🎱 CUE PILL — matches all cue types
+  if (active === "cue") {
+    return result.filter((l) => {
+      const cat = (l.category ?? "").toLowerCase()
+      return CUE_CATEGORIES.includes(cat) || cat.includes("cue")
+    })
+  }
+
+  // 📦 OTHER PILL — everything not in known marketplace categories
+  if (active === "other") {
+    const knownCategories = [
+      ...CUE_CATEGORIES,
+      ...CASE_CATEGORIES,
+      "shaft",
+      "apparel",
+      "accessories",
+      "collectibles",
+    ]
+
+    return result.filter((l) => {
+      const cat = (l.category ?? "").toLowerCase()
+      return !knownCategories.includes(cat)
+    })
+  }
+
+  // 🔒 DEFAULT EXACT MATCH (for apparel, shaft, accessories, etc.)
+  return result.filter((l) => {
+    const cat = (l.category ?? "").toLowerCase()
+    return cat === active
+  })
+}, [listings, activeCategory, search])
 
   /* ---------------- RENDER ---------------- */
 
@@ -563,6 +564,17 @@ const checkUnreadNotifications = async () => {
             />
 
             <MenuDivider />
+
+            <MenuItem
+  icon="heart-outline"
+  label="My Likes"
+  onPress={() => {
+    setMenuOpen(false)
+    router.push("/watching")
+  }}
+/>
+
+<MenuDivider />
 
             <MenuItem
               icon="briefcase-outline"

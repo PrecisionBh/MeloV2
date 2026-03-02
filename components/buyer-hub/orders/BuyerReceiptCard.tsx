@@ -37,7 +37,7 @@ export default function BuyerReceiptCard({
         <ReceiptRow label="Shipping" value={`$${shipping.toFixed(2)}`} />
 
         <ReceiptRow
-          label="Tax and Compliance"
+          label="Sales Tax and Compliance Fee (7.5%)"
           value={`$${tax.toFixed(2)}`}
           subtle
         />

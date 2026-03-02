@@ -303,7 +303,7 @@ setActiveDispute(disputeData ?? null)
    if (loading) return <ActivityIndicator style={{ marginTop: 80 }} />
   if (!order) return null
 
-  /* ---------------- STATE ---------------- */
+
 
   /* ---------------- STATE ---------------- */
 
@@ -346,10 +346,22 @@ const showShippingAddress =
   !isCompleted &&
   !isRefunded
 
-  /* ---------------- MONEY ---------------- */
+   /* ---------------- MONEY (LEDGER TRUTH - PRO 3.5% / FREE 5%) ---------------- */
+
+  // 🧾 NEVER recalculate fees on frontend.
+  // Webhook already applied:
+  // - 3.5% for Pro sellers
+  // - 5% for Free sellers
+  // and stored them in ledger fields below (source of truth).
 
   const itemPrice = (order.item_price_cents ?? 0) / 100
   const shipping = (order.shipping_amount_cents ?? 0) / 100
+  const tax = (order.tax_cents ?? 0) / 100
+
+  // 💰 CRITICAL: Use webhook-calculated values (matches Stripe + payouts exactly)
+  const sellerFee = (order.seller_fee_cents ?? 0) / 100
+  const sellerNet = (order.seller_net_cents ?? 0) / 100
+  const totalPaid = (order.amount_cents ?? 0) / 100
 
   /* ---------------- ACTION FLAGS (SCREEN CONTROLS) ---------------- */
 

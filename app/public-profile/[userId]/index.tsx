@@ -564,16 +564,18 @@ const styles = StyleSheet.create({
     color: "#0F1E17",
   },
 
-  /* 🟢 NEW: Row that holds Follow + Message buttons */
+  /* Row that holds Follow + Message buttons */
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
     marginTop: 12,
+    width: "100%",
+    paddingHorizontal: 16,
   },
 
-  /* Follow button (left pill) */
+  /* Follow button (NOT following - Melo green) */
   followButton: {
     flex: 1,
     paddingVertical: 10,
@@ -584,30 +586,37 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
+  /* ⭐ Following state (GOLD instead of dark invisible grey) */
   followingButton: {
-    backgroundColor: "#2E2E2E",
+    backgroundColor: "#F4C430",
+    borderWidth: 1,
+    borderColor: "#E0B020",
   },
 
+  /* Text must be DARK so gold & green are readable */
   followButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "800",
+    color: "#0F1E17",
+    fontWeight: "900",
     fontSize: 14,
   },
 
-  /* 🟢 NEW: Message Seller button (right pill) */
+  /* Message Seller button (white + black text + border for contrast) */
   messageSellerButton: {
     flex: 1,
     paddingVertical: 10,
     paddingHorizontal: 18,
     borderRadius: 18,
-    backgroundColor: "#0F1E17",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#0F1E17",
     alignItems: "center",
     justifyContent: "center",
   },
 
+  /* FIX: was white on white (invisible) */
   messageSellerText: {
-    color: "#FFFFFF",
-    fontWeight: "800",
+    color: "#0F1E17",
+    fontWeight: "900",
     fontSize: 14,
   },
 
@@ -637,6 +646,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     padding: 14,
     borderRadius: 14,
+
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
 
   bioText: {

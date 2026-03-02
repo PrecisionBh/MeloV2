@@ -37,7 +37,7 @@ export default function OfferReceiptCard({
 
       {taxCompliance > 0 && (
         <Row
-          label="Tax & Compliance"
+          label="Sales Tax & Compliance Fee (7.5%)" 
           value={`$${Number(taxCompliance).toFixed(2)}`}
         />
       )}

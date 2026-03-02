@@ -100,7 +100,7 @@ export default function UpgradeToProButton({ variant = "full", style }: Props) {
 
           {/* 🔥 UPDATED OFFER (LOCKED IN PRICING + BENEFITS) */}
           <Text style={styles.subtitle}>
-            $24.99/mo • 5 Boosts + 1 Mega Boost every 30 days • Lower 3.5% seller fees • Auto payout tracking
+            $24.99/mo • 5 Boosts + 1 Mega Boost / Month • Lower 3.5% seller fees • Auto payout tracking • Quantity list items. 
           </Text>
         </View>
 

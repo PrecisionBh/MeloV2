@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons"
 import { useEffect, useRef } from "react"
 import {
-    Animated,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native"
 
 type Props = {
@@ -85,19 +85,13 @@ export default function ProProfileHero({
         <View style={styles.glow} />
 
         {/* ✨ GOLD TWINKLE STARS (VERY FAINT) */}
-        <Animated.Text
-          style={[styles.star, styles.starOne, { opacity: starOpacity1 }]}
-        >
+        <Animated.Text style={[styles.star, styles.starOne, { opacity: starOpacity1 }]}>
           ✦
         </Animated.Text>
-        <Animated.Text
-          style={[styles.star, styles.starTwo, { opacity: starOpacity2 }]}
-        >
+        <Animated.Text style={[styles.star, styles.starTwo, { opacity: starOpacity2 }]}>
           ✧
         </Animated.Text>
-        <Animated.Text
-          style={[styles.star, styles.starThree, { opacity: starOpacity3 }]}
-        >
+        <Animated.Text style={[styles.star, styles.starThree, { opacity: starOpacity3 }]}>
           ✦
         </Animated.Text>
 
@@ -122,9 +116,7 @@ export default function ProProfileHero({
         />
 
         {/* NAME */}
-        <Text style={styles.name}>
-          {displayName ?? "User"}
-        </Text>
+        <Text style={styles.name}>{displayName ?? "User"}</Text>
 
         {/* STATS */}
         <View style={styles.statsRow}>
@@ -134,15 +126,9 @@ export default function ProProfileHero({
             activeOpacity={hasReviews ? 0.7 : 1}
           >
             <View style={styles.stat}>
-              <Text style={styles.statValue}>
-                {hasReviews ? `${ratingAvg} ★` : "—"}
-              </Text>
+              <Text style={styles.statValue}>{hasReviews ? `${ratingAvg} ★` : "—"}</Text>
               <Text style={styles.statLabel}>Rating</Text>
-              {hasReviews && (
-                <Text style={styles.statSub}>
-                  {ratingCount} reviews
-                </Text>
-              )}
+              {hasReviews && <Text style={styles.statSub}>{ratingCount} reviews</Text>}
             </View>
           </TouchableOpacity>
 
@@ -168,8 +154,14 @@ export default function ProProfileHero({
                 styles.followButton,
                 isFollowing && styles.followingButton,
               ]}
+              activeOpacity={0.9}
             >
-              <Text style={styles.followText}>
+              <Text
+                style={[
+                  styles.followText,
+                  isFollowing && styles.followTextFollowing,
+                ]}
+              >
                 {followLoading
                   ? "Loading..."
                   : isFollowing
@@ -183,9 +175,7 @@ export default function ProProfileHero({
               style={styles.messageButton}
               activeOpacity={0.9}
             >
-              <Text style={styles.messageText}>
-                Message Seller
-              </Text>
+              <Text style={styles.messageText}>Message Seller</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -337,41 +327,47 @@ const styles = StyleSheet.create({
     width: "100%",
   },
 
+  /* ✅ FOLLOW: Green normally, Gold when following */
   followButton: {
     flex: 1,
     paddingVertical: 13,
     borderRadius: 20,
-    backgroundColor: "#FFD700",
+    backgroundColor: "#7FAF9B", // not following
     alignItems: "center",
     justifyContent: "center",
   },
 
   followingButton: {
-    backgroundColor: "#1A2A23",
+    backgroundColor: "#F4C430", // following = gold
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: "#E0B020",
   },
 
   followText: {
-    color: "#0B1511",
+    color: "#0B1511", // readable on green
     fontWeight: "900",
     fontSize: 14,
     letterSpacing: 0.4,
   },
 
+  followTextFollowing: {
+    color: "#0F1E17", // readable on gold
+  },
+
+  /* ✅ MESSAGE: White button, black text */
   messageButton: {
     flex: 1,
     paddingVertical: 13,
     borderRadius: 20,
-    backgroundColor: "#121212",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.28)", // subtle on dark bg
     alignItems: "center",
     justifyContent: "center",
   },
 
   messageText: {
-    color: "#FFFFFF",
+    color: "#0F1E17",
     fontWeight: "900",
     fontSize: 14,
     letterSpacing: 0.4,

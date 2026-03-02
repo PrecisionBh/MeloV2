@@ -18,14 +18,18 @@ import { useCallback, useState } from "react"
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   ScrollView,
   StyleSheet,
+  Text,
+  TouchableOpacity,
   View,
 } from "react-native"
 
 type ProfileRow = {
   is_pro: boolean | null
   boosts_remaining: number | null
+  mega_boosts_remaining?: number | null // 👑 NEW
 }
 
 /* ---------------- SELECTOR DATA ---------------- */
@@ -100,8 +104,10 @@ export default function CreateListingScreen() {
   const [showConditionModal, setShowConditionModal] = useState(false)
 
   const [isBoosted, setIsBoosted] = useState(false)
+  const [isMegaBoosted, setIsMegaBoosted] = useState(false) // 👑 NEW
   const [quantity, setQuantity] = useState("1")
   const [boostsRemaining, setBoostsRemaining] = useState<number>(0)
+  const [megaBoostsRemaining, setMegaBoostsRemaining] = useState<number>(0) // 👑 NEW
 
   const [shippingType, setShippingType] =
     useState<"seller_pays" | "buyer_pays" | null>(null)
@@ -118,6 +124,7 @@ export default function CreateListingScreen() {
 
   const [checkingPro, setCheckingPro] = useState(true)
   const [isPro, setIsPro] = useState<boolean>(false)
+  const [showLimitModal, setShowLimitModal] = useState(false)
 
   /* ---------------- CREATE LISTING (FIXED QUANTITY + DB SAFE) ---------------- */
   const handleCreateListing = async () => {
@@ -127,11 +134,28 @@ export default function CreateListingScreen() {
     try {
       setSubmitting(true)
 
+            // 🔒 FREE PLAN GUARD: Max 5 ACTIVE listings (status=active AND is_sold=false)
+      if (!isPro) {
+        const { count, error: countError } = await supabase
+          .from("listings")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", session.user.id)
+          .eq("status", "active")
+          .eq("is_sold", false)
+
+        if (countError) throw countError
+
+        if ((count ?? 0) >= 5) {
+          setShowLimitModal(true)
+          setSubmitting(false)
+          return
+        }
+      }
+
       const parsedPrice = parseFloat(price)
       const parsedMinOffer = minOffer ? parseFloat(minOffer) : null
       const parsedShippingPrice = shippingPrice ? parseFloat(shippingPrice) : 0
 
-      // 🔒 HARD CLAMP: quantity must ALWAYS be >= 1
       const rawQty = parseInt(quantity, 10)
       const safeQuantity = isPro
         ? Math.max(1, Number.isFinite(rawQty) ? rawQty : 1)
@@ -157,8 +181,6 @@ export default function CreateListingScreen() {
           shipping_type: shippingType,
           shipping_price: parsedShippingPrice,
           image_urls: images,
-
-          // 🔥 CRITICAL: BOTH columns (min 1, never null)
           quantity: safeQuantity,
           quantity_available: safeQuantity,
         })
@@ -167,27 +189,25 @@ export default function CreateListingScreen() {
 
       if (error) throw error
 
-      if (isPro && isBoosted && data?.id) {
-        const { error: boostError } = await supabase.rpc("boost_listing", {
-          listing_id: data.id,
-          user_id: session.user.id,
-        })
+      // 🔥 MUTUAL EXCLUSION: only ONE boost type allowed
+      if (isPro && data?.id) {
+        if (isMegaBoosted) {
+          const { error: megaError } = await supabase.rpc("mega_boost_listing", {
+            listing_id: data.id,
+            user_id: session.user.id,
+          })
 
-        if (boostError) {
-          console.warn("Boost failed:", boostError.message)
-          Alert.alert(
-            "Listing Created",
-            "Your listing was created but the boost could not be applied."
-          )
-        } else {
-          const { data: updatedProfile } = await supabase
-            .from("profiles")
-            .select("boosts_remaining")
-            .eq("id", session.user.id)
-            .single()
+          if (megaError) {
+            console.warn("Mega Boost failed:", megaError.message)
+          }
+        } else if (isBoosted) {
+          const { error: boostError } = await supabase.rpc("boost_listing", {
+            listing_id: data.id,
+            user_id: session.user.id,
+          })
 
-          if (updatedProfile) {
-            setBoostsRemaining(updatedProfile.boosts_remaining ?? 0)
+          if (boostError) {
+            console.warn("Boost failed:", boostError.message)
           }
         }
       }
@@ -228,12 +248,13 @@ export default function CreateListingScreen() {
 
           const { data: profile } = await supabase
             .from("profiles")
-            .select("is_pro, boosts_remaining")
+            .select("is_pro, boosts_remaining, mega_boosts_remaining") // 👑 UPDATED
             .eq("id", session.user.id)
             .single<ProfileRow>()
 
           setIsPro(Boolean(profile?.is_pro))
           setBoostsRemaining(profile?.boosts_remaining ?? 0)
+          setMegaBoostsRemaining(profile?.mega_boosts_remaining ?? 0) // 👑 NEW
         } finally {
           setCheckingAddress(false)
           setCheckingPro(false)
@@ -289,8 +310,18 @@ export default function CreateListingScreen() {
             <ProFeaturesSection
               isPro={isPro}
               boostsRemaining={boostsRemaining}
+              megaBoostsRemaining={megaBoostsRemaining} // 👑 NEW
               isBoosted={isBoosted}
-              setIsBoosted={setIsBoosted}
+              setIsBoosted={(val: boolean) => {
+                setIsBoosted(val)
+                if (val) setIsMegaBoosted(false) // 🔒 prevent dual selection
+              }}
+              isMegaBoosted={isMegaBoosted} // 👑 NEW
+              setIsMegaBoosted={(val: boolean) => {
+                setIsMegaBoosted(val)
+                if (val) setIsBoosted(false) // 🔒 prevent dual selection
+              }}
+              megaBoostDescription="Take over the home page in one listing." // 👑 NEW
               quantity={quantity}
               setQuantity={setQuantity}
             />
@@ -362,11 +393,43 @@ export default function CreateListingScreen() {
         onClose={() => setShowConditionModal(false)}
       />
 
+            {/* 🔒 FREE TIER LIMIT MODAL */}
+      <Modal visible={showLimitModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>
+              You have reached your free plan limit
+            </Text>
+
+            <Text style={styles.modalText}>
+              Free accounts can only have 5 active listings.
+              Upgrade to Melo Pro to unlock unlimited listings and more Pro features.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.upgradeButton}
+              onPress={() => {
+                setShowLimitModal(false)
+                router.push("/melo-pro") // routes to app/melo-pro/index.tsx
+              }}
+            >
+              <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => setShowLimitModal(false)}>
+              <Text style={styles.laterText}>Maybe Later</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <ReturnAddressRequiredModal
         visible={showAddressModal}
         onClose={() => setShowAddressModal(false)}
       />
     </View>
+
+    
   )
 }
 
@@ -375,4 +438,50 @@ const styles = StyleSheet.create({
   loaderWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 140 },
   sectionSpacing: { marginTop: 18 },
+
+    modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalCard: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  modalText: {
+    fontSize: 14,
+    color: "#555",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  upgradeButton: {
+    backgroundColor: "#7FAF9B",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    width: "100%",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  upgradeButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+  laterText: {
+    color: "#888",
+    fontSize: 14,
+  },
+  
 })

@@ -16,7 +16,7 @@ export default function FAQsScreen() {
     <View style={styles.screen}>
       {/* STANDARDIZED HEADER */}
       <AppHeader
-        title="Frequently Asked Questions"
+        title="FAQ'S"
         backLabel="Legal"
         backRoute="/legal"
       />

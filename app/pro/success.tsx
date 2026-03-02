@@ -145,10 +145,10 @@ export default function MeloProSuccessScreen() {
 
             <TouchableOpacity
               style={styles.primaryBtn}
-              onPress={() => router.replace("/melo-pro")}
+              onPress={() => router.replace("/seller-hub")}
             >
               <Text style={styles.primaryText}>
-                Go to Melo Pro Dashboard
+                Go to Dashboard
               </Text>
             </TouchableOpacity>
 

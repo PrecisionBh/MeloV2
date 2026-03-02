@@ -3,12 +3,12 @@ import * as Linking from "expo-linking"
 import { useRouter } from "expo-router"
 import { useState } from "react"
 import {
-    ActivityIndicator,
-    Alert,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native"
 
 import AppHeader from "@/components/app-header"
@@ -122,8 +122,8 @@ export default function MeloProCheckoutScreen() {
 
         <View style={styles.priceBox}>
           <Text style={styles.priceLabel}>Melo Pro</Text>
-          <Text style={styles.price}>$10 / month</Text>
-          <Text style={styles.priceSub}>Cancel anytime</Text>
+          <Text style={styles.price}>$24.99 / month</Text>
+          <Text style={styles.priceSub}>Cancel anytime, No Contracts</Text>
         </View>
 
         <TouchableOpacity

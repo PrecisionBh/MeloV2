@@ -73,8 +73,8 @@ export default function FilterBar({ active, onChange }: Props) {
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: "#7FAF9B", // header sage
-    paddingVertical: 8, // 👈 smaller than before (back to sleek)
+    backgroundColor: "#7FAF9B", // header sage (Melo brand)
+    paddingVertical: 8,
     paddingLeft: 12,
   },
 
@@ -85,8 +85,8 @@ const styles = StyleSheet.create({
 
   pill: {
     backgroundColor: "#FFFFFF",
-    paddingHorizontal: 14, // 👈 reduced width
-    paddingVertical: 6, // 👈 smaller height (matches your original feel)
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     borderRadius: 999,
 
     // Light depth (clean marketplace look)
@@ -97,27 +97,27 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  // 🔥 MUCH clearer active state (not close to white)
+  // Active state (matches your current Melo style)
   activePill: {
-    backgroundColor: "#00ff88", // lighter sage tint (distinct but on-brand)
+    backgroundColor: "#00ff88",
   },
 
-  // ✨ Real visible glow (works on Android + iOS)
+  // Glow (unchanged)
   glow: {
     shadowColor: "#ccff00",
     shadowOpacity: 0.9,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 0 },
-    elevation: 5, // Android glow visibility
+    elevation: 5,
   },
 
   text: {
-    fontSize: 12, // 👈 back to original compact size
+    fontSize: 12,
     fontWeight: "700",
     color: "#1E1E1E",
   },
 
   activeText: {
-    color: "#0F1E17", // strong contrast
+    color: "#0F1E17",
   },
 })

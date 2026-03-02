@@ -2,13 +2,13 @@ import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
 import { useEffect, useMemo, useState } from "react"
 import {
-    Alert,
-    Dimensions,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native"
 
 import AppHeader from "@/components/app-header"
@@ -69,7 +69,7 @@ export default function MeloProScreen() {
     if (!userId) return "Sign in to upgrade"
     if (loading) return "Loading..."
     if (isPro) return "You’re Melo Pro"
-    return "Become Melo Pro — $10/mo"
+    return "Become Melo Pro — $24.99/mo"
   }, [userId, loading, isPro])
 
   const onPressCTA = () => {
@@ -106,7 +106,7 @@ export default function MeloProScreen() {
             </View>
 
             <View style={styles.pricePill}>
-              <Text style={styles.pricePillText}>$10 / month</Text>
+              <Text style={styles.pricePillText}>$24.99 / month</Text>
             </View>
           </View>
 
@@ -151,35 +151,47 @@ export default function MeloProScreen() {
         </View>
 
         {/* WHAT YOU GET */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>What you get</Text>
+<View style={styles.section}>
+  <Text style={styles.sectionTitle}>What you get</Text>
 
-          <PerkRow
-            icon="ribbon-outline"
-            title="Melo Pro badge"
-            desc="Look premium on your public profile and listings."
-          />
-          <PerkRow
-            icon="infinite-outline"
-            title="Unlimited active listings"
-            desc="Free users are capped at 5 active listings. Pro removes the cap."
-          />
-          <PerkRow
-            icon="cube-outline"
-            title="Quantity listings"
-            desc="List items with quantity for real inventory selling."
-          />
-          <PerkRow
-            icon="rocket-outline"
-            title="10 boosts per month"
-            desc="Each boost lasts 7 days. Reboost to stay featured."
-          />
-          <PerkRow
-            icon="wallet-outline"
-            title="Payout history access"
-            desc="Pro-only seller analytics and payout visibility."
-          />
-        </View>
+  <PerkRow
+    icon="trending-down-outline"
+    title="Lower seller fees"
+    desc="Reduced selling fee from 5% to 3.5% on all sales."
+  />
+
+  <PerkRow
+    icon="ribbon-outline"
+    title="Melo Pro badge"
+    desc="Look premium on your public profile and listings."
+  />
+  <PerkRow
+    icon="infinite-outline"
+    title="Unlimited active listings"
+    desc="Free users are capped at 5 active listings. Pro removes the cap."
+  />
+  <PerkRow
+    icon="cube-outline"
+    title="Quantity listings"
+    desc="List items with quantity for real inventory selling."
+  />
+  <PerkRow
+    icon="rocket-outline"
+    title="5 boosts per month"
+    desc="Each boost lasts 7 days. Reboost to stay featured."
+  />
+  <PerkRow
+    icon="flame-outline"
+    title="1 Mega Boost per month"
+    desc="One free Mega Boost every month to dominate the top of the marketplace."
+  />
+  
+  <PerkRow
+    icon="wallet-outline"
+    title="Payout history access"
+    desc="Pro-only seller analytics and payout visibility."
+  />
+</View>
 
         <View style={{ height: 28 }} />
       </ScrollView>
