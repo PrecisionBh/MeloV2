@@ -129,14 +129,18 @@ export default function HomeScreen() {
 
   useFocusEffect(
   useCallback(() => {
+
     // 🔥 DO NOT reload listings if we already have them (prevents scroll reset)
     if (listings.length === 0) {
-      loadListings()
+    } else {
     }
 
     // Lightweight background checks only
     checkUnreadMessages()
     checkUnreadNotifications()
+
+    return () => {
+    }
   }, [listings.length])
 )
 

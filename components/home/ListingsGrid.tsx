@@ -13,12 +13,6 @@ import UpgradeToProButton from "../pro/UpgradeToProButton"
 import ListingCard, { Listing } from "./ListingCard"
 import MegaBoostBlock from "./MegaBoostBlock"; // 👑 NEW
 
-/* 🧠 DEBUG IMPORT LOGS (CRITICAL FOR INVALID ELEMENT ERROR) */
-console.log("🧩 ListingsGrid loaded")
-console.log("🧩 ListingCard import:", ListingCard)
-console.log("🧩 UpgradeToProButton import:", UpgradeToProButton)
-console.log("🧩 MegaBoostBlock import:", MegaBoostBlock)
-
 /* ---------------- TYPES ---------------- */
 
 type Props = {
@@ -52,12 +46,6 @@ export default function ListingsGrid({
   // 🧠 CRITICAL: FlatList ref for REAL scroll restoration (NOT initialScrollOffset)
   const flatListRef = useRef<FlatList<GridRowItem>>(null)
   const hasRestoredScroll = useRef(false)
-
-  console.log("📦 ListingsGrid render start")
-  console.log("📦 listings length:", listings?.length)
-  console.log("📦 megaBoostListings length:", megaBoostListings?.length)
-  console.log("📦 showUpgradeRow:", showUpgradeRow)
-  console.log("🧠 initialScrollOffset:", initialScrollOffset)
 
   const NUM_COLUMNS = 3
   const MEGA_BOOST_FREQUENCY = 6 // 👑 Every 6th row
@@ -157,7 +145,6 @@ export default function ListingsGrid({
         />
       }
       renderItem={({ item, index }) => {
-        console.log("🧩 Rendering item index:", index, "type:", item.type)
 
         try {
           // 👑 FULL WIDTH MEGA BOOST BLOCK
@@ -204,8 +191,6 @@ export default function ListingsGrid({
             </View>
           )
         } catch (err) {
-          console.error("💥 RENDER CRASH SOURCE (ListingsGrid):", err)
-          console.error("💥 Item that caused crash:", item)
           return null
         }
       }}
