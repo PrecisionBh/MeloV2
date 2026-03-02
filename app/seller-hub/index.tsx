@@ -1,11 +1,13 @@
 import { Ionicons } from "@expo/vector-icons"
 import { useFocusEffect, useRouter } from "expo-router"
 import { useCallback, useState } from "react"
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
 import AppHeader from "@/components/app-header"
-import IsProButton from "@/components/pro/isprobutton"
 import UpgradeToProButton from "@/components/pro/UpgradeToProButton"
+import FreeDashboardSection from "@/components/seller-hub/FreeDashboardSection"
+import ProBenefitsCard from "@/components/seller-hub/ProBenefitsCard"
+import ProDashboardSection from "@/components/seller-hub/ProDashboardSection"
 import { useAuth } from "@/context/AuthContext"
 import { handleAppError } from "@/lib/errors/appError"
 import { supabase } from "@/lib/supabase"
@@ -80,19 +82,11 @@ export default function SellerHubScreen() {
     if (!sellerId) return
 
     try {
-      const { count, error } = await supabase
+      const { count } = await supabase
         .from("orders")
         .select("id", { count: "exact", head: true })
         .eq("status", "paid")
         .eq("seller_id", sellerId)
-
-      if (error) {
-        handleAppError(error, {
-          context: "seller_hub_load_orders_to_ship",
-          silent: true,
-        })
-        return
-      }
 
       setOrdersToShipCount(count ?? 0)
     } catch (err) {
@@ -109,19 +103,11 @@ export default function SellerHubScreen() {
     if (!sellerId) return
 
     try {
-      const { count, error } = await supabase
+      const { count } = await supabase
         .from("orders")
         .select("id", { count: "exact", head: true })
         .eq("seller_id", sellerId)
         .in("status", ["shipped", "in_transit"])
-
-      if (error) {
-        handleAppError(error, {
-          context: "seller_hub_load_orders_in_progress",
-          silent: true,
-        })
-        return
-      }
 
       setOrdersInProgressCount(count ?? 0)
     } catch (err) {
@@ -138,19 +124,11 @@ export default function SellerHubScreen() {
     if (!sellerId) return
 
     try {
-      const { count, error } = await supabase
+      const { count } = await supabase
         .from("messages")
         .select("id", { count: "exact", head: true })
         .is("read_at", null)
         .eq("receiver_id", sellerId)
-
-      if (error) {
-        handleAppError(error, {
-          context: "seller_hub_load_unread_messages",
-          silent: true,
-        })
-        return
-      }
 
       setUnreadMessagesCount(count ?? 0)
     } catch (err) {
@@ -167,20 +145,12 @@ export default function SellerHubScreen() {
     if (!sellerId) return
 
     try {
-      const { count, error } = await supabase
+      const { count } = await supabase
         .from("offers")
         .select("id", { count: "exact", head: true })
         .eq("seller_id", sellerId)
         .in("status", ["pending", "countered"])
         .neq("last_actor", "seller")
-
-      if (error) {
-        handleAppError(error, {
-          context: "seller_hub_load_offers_action",
-          silent: true,
-        })
-        return
-      }
 
       setOffersActionCount(count ?? 0)
     } catch (err) {
@@ -191,66 +161,55 @@ export default function SellerHubScreen() {
     }
   }
 
-  /* ---------------- COMBINED BADGES ---------------- */
-
   const totalOrdersBadge = ordersToShipCount + ordersInProgressCount
 
   return (
     <View style={styles.screen}>
       <AppHeader title="Seller Hub" backLabel="Profile" backRoute="/profile" />
 
-      {/* 👑 MELO PRO CTA (SMART SWITCH) */}
-      <View style={styles.proWrap}>
-        {proLoading ? (
-          <ActivityIndicator style={{ marginVertical: 10 }} />
-        ) : isPro ? (
-          <IsProButton />
-        ) : (
-          <UpgradeToProButton />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 🔓 FREE SECTION */}
+        <FreeDashboardSection
+          totalOrdersBadge={totalOrdersBadge}
+          offersActionCount={offersActionCount}
+          unreadMessagesCount={unreadMessagesCount}
+        />
+
+        {/* -------- TIGHT SECTION DIVIDER -------- */}
+        <View style={styles.dividerWrap}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>Pro Members</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {/* ✨ WHAT MELO PRO UNLOCKS (VALUE STACK) */}
+        <ProBenefitsCard isPro={isPro} />
+
+        {/* 🚀 CONVERSION BUTTON (ONLY SHOW FOR FREE USERS) */}
+        {!isPro && (
+          <UpgradeToProButton style={styles.upgradeButton} />
         )}
-      </View>
 
-      <View style={styles.menu}>
-        <MenuItem
-          icon="grid-outline"
-          label="My Listings"
-          onPress={() => router.push("/seller-hub/my-listings")}
-        />
+        {/* ✅ PRO SECTION */}
+        {/* IMPORTANT:
+           - NO pointerEvents
+           - NO opacity wrapper
+           - NO gray overlay
+           - Cards handle their own lock logic (like Create Listing) */}
+        <View style={styles.proWrap}>
+          <ProDashboardSection
+            userId={sellerId || ""}
+            boostsRemaining={boostsRemaining}
+            lastBoostReset={null}
+            isPro={isPro}
+          />
+        </View>
+      </ScrollView>
 
-        <MenuItem
-          icon="cube-outline"
-          label="Orders"
-          badgeCount={totalOrdersBadge}
-          onPress={() => router.push("/seller-hub/orders")}
-        />
-
-        <MenuItem
-          icon="pricetags-outline"
-          label="Offers"
-          badgeCount={offersActionCount}
-          onPress={() => router.push("/seller-hub/offers")}
-        />
-
-        <MenuItem
-          icon="wallet-outline"
-          label="Wallet"
-          onPress={() => router.push("/seller-hub/wallet")}
-        />
-
-        <MenuItem
-          icon="chatbubble-ellipses-outline"
-          label="Messages"
-          badgeCount={unreadMessagesCount}
-          onPress={() => router.push("/messages")}
-        />
-
-        <MenuItem
-          icon="settings-outline"
-          label="Settings"
-          onPress={() => router.push("/settings")}
-        />
-      </View>
-
+      {/* 📌 STICKY FOOTER CREATE LISTING */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => router.push("/seller-hub/create-listing")}
@@ -263,80 +222,47 @@ export default function SellerHubScreen() {
   )
 }
 
-/* ---------------- MENU ITEM ---------------- */
-
-function MenuItem({
-  icon,
-  label,
-  badgeCount,
-  onPress,
-}: {
-  icon: any
-  label: string
-  badgeCount?: number
-  onPress: () => void
-}) {
-  return (
-    <TouchableOpacity style={styles.menuItem} onPress={onPress}>
-      <Ionicons name={icon} size={22} color="#0F1E17" />
-      <Text style={styles.menuText}>{label}</Text>
-
-      <View style={{ flex: 1 }} />
-
-      {typeof badgeCount === "number" && badgeCount > 0 && (
-        <View style={styles.countBadge}>
-          <Text style={styles.countText}>{badgeCount}</Text>
-        </View>
-      )}
-
-      <Ionicons name="chevron-forward" size={18} color="#9FB8AC" />
-    </TouchableOpacity>
-  )
-}
-
-/* ---------------- STYLES ---------------- */
-
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#EAF4EF",
   },
-  proWrap: {
-    marginTop: 10,
-    marginHorizontal: 12,
+  scrollContent: {
+    paddingBottom: 120,
   },
-  menu: {
-    marginTop: 10,
-    backgroundColor: "#FFFFFF",
-  },
-  menuItem: {
+
+  dividerWrap: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E6EFEA",
+    marginTop: 0,
+    marginBottom: 0,
+    paddingHorizontal: 16,
   },
-  menuText: {
-    marginLeft: 14,
-    fontSize: 15,
-    color: "#0F1E17",
-    fontWeight: "500",
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#DDE9E3",
   },
-  countBadge: {
-    backgroundColor: "#EB5757",
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 8,
-  },
-  countText: {
-    color: "#fff",
-    fontSize: 12,
+  dividerText: {
+    marginHorizontal: 10,
+    fontSize: 20,
     fontWeight: "900",
+    color: "#5F7D71",
+    letterSpacing: 0.5,
   },
+
+  /* Matches Create Listing spacing exactly */
+  upgradeButton: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 6,
+  },
+
+  /* CRITICAL: clean container (no opacity, no blocking, no tint) */
+  proWrap: {
+    marginTop: 4,
+  },
+
   fab: {
     position: "absolute",
     bottom: 55,

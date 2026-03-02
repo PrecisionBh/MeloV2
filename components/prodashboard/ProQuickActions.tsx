@@ -2,82 +2,48 @@ import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
-import { useAuth } from "@/context/AuthContext"
+type Props = {
+  isPro: boolean
+}
 
-export default function ProQuickActions() {
+export default function ProQuickActions({ isPro }: Props) {
   const router = useRouter()
-  const { session } = useAuth()
-  const userId = session?.user?.id
+
+  const handlePressPayoutHistory = () => {
+    if (!isPro) {
+      router.push("/melo-pro")
+      return
+    }
+    router.push("/seller-hub/payout-history")
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Pro Tools</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>Pro Tools</Text>
 
-      {/* View Public Profile */}
-      <TouchableOpacity
-        style={styles.row}
-        activeOpacity={0.7}
-        onPress={() => {
-          if (!userId) return
-          router.push({
-            pathname: "/public-profile/[userId]",
-            params: { userId },
-          })
-        }}
-      >
-        <View style={styles.left}>
-          <View style={styles.iconWrap}>
-            <Ionicons name="person-outline" size={18} color="#0F1E17" />
+        {!isPro && (
+          <View style={styles.proPill}>
+            <Text style={styles.proPillText}>PRO</Text>
           </View>
-          <Text style={styles.label}>View Public Profile</Text>
-        </View>
+        )}
+      </View>
 
-        <Ionicons name="chevron-forward" size={18} color="#0F1E17" />
-      </TouchableOpacity>
-
-      {/* Manage Listings */}
+      {/* Payout History */}
       <TouchableOpacity
-        style={styles.row}
+        style={[styles.row, !isPro && styles.rowLocked]}
         activeOpacity={0.7}
-        onPress={() => router.push("/seller-hub/my-listings")}
-      >
-        <View style={styles.left}>
-          <View style={styles.iconWrap}>
-            <Ionicons name="pricetag-outline" size={18} color="#0F1E17" />
-          </View>
-          <Text style={styles.label}>Manage Listings</Text>
-        </View>
-
-        <Ionicons name="chevron-forward" size={18} color="#0F1E17" />
-      </TouchableOpacity>
-
-      {/* Payout History (Pro Only Area) */}
-      <TouchableOpacity
-        style={styles.row}
-        activeOpacity={0.7}
-        onPress={() => router.push("/seller-hub/payout-history")}
+        onPress={handlePressPayoutHistory}
       >
         <View style={styles.left}>
           <View style={styles.iconWrap}>
             <Ionicons name="wallet-outline" size={18} color="#0F1E17" />
           </View>
-          <Text style={styles.label}>Payout History</Text>
-        </View>
 
-        <Ionicons name="chevron-forward" size={18} color="#0F1E17" />
-      </TouchableOpacity>
-
-      {/* Manage Subscription */}
-      <TouchableOpacity
-        style={styles.row}
-        activeOpacity={0.7}
-        onPress={() => router.push("/manage-subscription")}
-      >
-        <View style={styles.left}>
-          <View style={styles.iconWrap}>
-            <Ionicons name="card-outline" size={18} color="#0F1E17" />
+          <View>
+            <Text style={styles.label}>Payout History</Text>
+            {!isPro && <Text style={styles.lockHint}>Upgrade to unlock</Text>}
           </View>
-          <Text style={styles.label}>Manage Subscription</Text>
         </View>
 
         <Ionicons name="chevron-forward" size={18} color="#0F1E17" />
@@ -95,15 +61,35 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 6,
     borderWidth: 1,
-    borderColor: "#E6EFEA", // soft premium border (NO heavy shadow)
+    borderColor: "#E6EFEA",
   },
+
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+
   title: {
     fontSize: 16,
     fontWeight: "900",
     color: "#0F1E17",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
   },
+
+  proPill: {
+    marginLeft: "auto",
+    backgroundColor: "#CFAF4A",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  proPillText: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: "#0F1E17",
+  },
+
   row: {
     height: 56,
     borderRadius: 14,
@@ -112,10 +98,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+
+  rowLocked: {
+    opacity: 0.45,
+  },
+
   left: {
     flexDirection: "row",
     alignItems: "center",
   },
+
   iconWrap: {
     width: 36,
     height: 36,
@@ -125,9 +117,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
   },
+
   label: {
     fontSize: 14,
     fontWeight: "800",
     color: "#0F1E17",
+  },
+
+  lockHint: {
+    marginTop: 2,
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#6B8F7D",
   },
 })

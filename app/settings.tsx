@@ -21,53 +21,44 @@ export default function SettingsScreen() {
   const handleLogout = () => {
     if (loggingOut) return
 
-    Alert.alert(
-      "Log out",
-      "Are you sure you want to log out?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Log out",
-          style: "destructive",
-          onPress: performLogout,
-        },
-      ]
-    )
+    Alert.alert("Log out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log out",
+        style: "destructive",
+        onPress: performLogout,
+      },
+    ])
   }
 
- const performLogout = async () => {
-  if (loggingOut) return
+  const performLogout = async () => {
+    if (loggingOut) return
 
-  try {
-    setLoggingOut(true)
+    try {
+      setLoggingOut(true)
 
-    // 🔒 FIRST: immediately navigate away from protected screens
-    router.replace("/signinscreen")
+      // 🔒 FIRST: immediately navigate away from protected screens
+      router.replace("/signinscreen")
 
-    // 🔒 SECOND: sign out AFTER navigation so mounted screens unmount cleanly
-    const { error } = await supabase.auth.signOut()
+      // 🔒 SECOND: sign out AFTER navigation so mounted screens unmount cleanly
+      const { error } = await supabase.auth.signOut()
 
-    if (error) {
-      throw error
+      if (error) {
+        throw error
+      }
+    } catch (err) {
+      handleAppError(err, {
+        fallbackMessage:
+          "Failed to log out. Please check your connection and try again.",
+        context: "logout",
+      })
+      setLoggingOut(false)
     }
-
-  } catch (err) {
-    handleAppError(err, {
-      fallbackMessage:
-        "Failed to log out. Please check your connection and try again.",
-      context: "logout",
-    })
-    setLoggingOut(false)
   }
-}
 
   return (
     <View style={styles.screen}>
-      <AppHeader
-        title="Settings"
-        backLabel="Profile"
-        backRoute="/profile"
-      />
+      <AppHeader title="Settings" backLabel="Profile" backRoute="/profile" />
 
       {/* ACCOUNT */}
       <View style={styles.section}>
@@ -90,6 +81,12 @@ export default function SettingsScreen() {
           label="Notifications"
           onPress={() => router.push("/settings/edit-notifications")}
         />
+
+        <SettingsItem
+          icon="card-outline"
+          label="Manage subscription"
+          onPress={() => router.push("/manage-subscription")}
+        />
       </View>
 
       {/* LEGAL */}
@@ -106,10 +103,7 @@ export default function SettingsScreen() {
       {/* LOGOUT */}
       <View style={styles.content}>
         <TouchableOpacity
-          style={[
-            styles.logoutBtn,
-            loggingOut && { opacity: 0.6 },
-          ]}
+          style={[styles.logoutBtn, loggingOut && { opacity: 0.6 }]}
           onPress={handleLogout}
           disabled={loggingOut}
           activeOpacity={0.9}
@@ -118,11 +112,7 @@ export default function SettingsScreen() {
             <ActivityIndicator color="#fff" />
           ) : (
             <>
-              <Ionicons
-                name="log-out-outline"
-                size={20}
-                color="#fff"
-              />
+              <Ionicons name="log-out-outline" size={20} color="#fff" />
               <Text style={styles.logoutText}>Log out</Text>
             </>
           )}
@@ -144,11 +134,7 @@ function SettingsItem({
   onPress: () => void
 }) {
   return (
-    <TouchableOpacity
-      style={styles.item}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
+    <TouchableOpacity style={styles.item} onPress={onPress} activeOpacity={0.7}>
       <Ionicons name={icon} size={20} color="#0F1E17" />
       <Text style={styles.itemText}>{label}</Text>
       <Ionicons

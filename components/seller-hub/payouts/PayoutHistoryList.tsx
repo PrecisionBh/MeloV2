@@ -1,4 +1,5 @@
-import { FlatList, StyleSheet, Text, View } from "react-native"
+import { useMemo, useState } from "react"
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
 type Payout = {
   id: string
@@ -15,6 +16,8 @@ type Props = {
   currency?: string
   loading?: boolean
 }
+
+type FilterKey = "all" | "paid" | "pending" | "instant" | "standard"
 
 function formatMoney(cents: number, currency: string = "USD") {
   const dollars = (cents ?? 0) / 100
@@ -50,13 +53,29 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-function PayoutRow({
-  payout,
-  currency,
+function Pill({
+  label,
+  active,
+  onPress,
 }: {
-  payout: Payout
-  currency: string
+  label: string
+  active: boolean
+  onPress: () => void
 }) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={onPress}
+      style={[styles.pill, active && styles.pillActive]}
+    >
+      <Text style={[styles.pillText, active && styles.pillTextActive]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  )
+}
+
+function PayoutRow({ payout, currency }: { payout: Payout; currency: string }) {
   const gross = formatMoney(payout.amount_cents, currency)
   const net = formatMoney(payout.net_cents, currency)
   const fee =
@@ -66,9 +85,7 @@ function PayoutRow({
 
   const date = formatDate(payout.created_at)
   const isInstant = payout.method === "instant"
-  const methodLabel = isInstant
-    ? "Instant Withdrawal"
-    : "Standard Withdrawal"
+  const methodLabel = isInstant ? "Instant Withdrawal" : "Standard Withdrawal"
 
   return (
     <View style={styles.row}>
@@ -82,20 +99,12 @@ function PayoutRow({
         </Text>
 
         <View style={styles.breakdown}>
-          <Text style={styles.breakdownText}>
-            Gross: {gross}
-          </Text>
+          <Text style={styles.breakdownText}>Gross: {gross}</Text>
 
-          {fee && (
-            <Text style={styles.feeText}>
-              Instant Fee (3%): -{fee}
-            </Text>
-          )}
+          {fee && <Text style={styles.feeText}>Instant Fee: -{fee}</Text>}
 
           {isInstant && (
-            <Text style={styles.netSubText}>
-              Net Sent to Bank: {net}
-            </Text>
+            <Text style={styles.netSubText}>Net Sent to Bank: {net}</Text>
           )}
         </View>
       </View>
@@ -110,6 +119,36 @@ export default function PayoutHistoryList({
   currency = "USD",
   loading = false,
 }: Props) {
+  const [filter, setFilter] = useState<FilterKey>("all")
+
+  const filtered = useMemo(() => {
+    if (!payouts) return []
+
+    switch (filter) {
+      case "paid":
+        return payouts.filter((p) => p.status === "paid")
+      case "pending":
+        return payouts.filter((p) => p.status === "pending")
+      case "instant":
+        return payouts.filter((p) => p.method === "instant")
+      case "standard":
+        return payouts.filter((p) => p.method !== "instant")
+      default:
+        return payouts
+    }
+  }, [payouts, filter])
+
+  const summary = useMemo(() => {
+    const gross = filtered.reduce((sum, p) => sum + (p.amount_cents ?? 0), 0)
+    const net = filtered.reduce((sum, p) => sum + (p.net_cents ?? 0), 0)
+    const fees = filtered.reduce((sum, p) => sum + (p.fee_cents ?? 0), 0)
+
+    const instantCount = filtered.filter((p) => p.method === "instant").length
+    const standardCount = filtered.length - instantCount
+
+    return { gross, net, fees, instantCount, standardCount, count: filtered.length }
+  }, [filtered])
+
   if (loading) {
     return (
       <View style={styles.card}>
@@ -124,8 +163,8 @@ export default function PayoutHistoryList({
       <View style={styles.card}>
         <Text style={styles.title}>Withdrawal History</Text>
         <Text style={styles.emptyText}>
-          No withdrawals yet. Your payout history will appear here once you
-          make a withdrawal.
+          No withdrawals yet. Your payout history will appear here once you make
+          a withdrawal.
         </Text>
       </View>
     )
@@ -135,14 +174,72 @@ export default function PayoutHistoryList({
     <View style={styles.card}>
       <Text style={styles.title}>Withdrawal History</Text>
 
+      {/* FILTER PILLS */}
+      <View style={styles.pillsRow}>
+        <Pill label="All" active={filter === "all"} onPress={() => setFilter("all")} />
+        <Pill
+          label="Paid"
+          active={filter === "paid"}
+          onPress={() => setFilter("paid")}
+        />
+        <Pill
+          label="Pending"
+          active={filter === "pending"}
+          onPress={() => setFilter("pending")}
+        />
+        <Pill
+          label="Instant"
+          active={filter === "instant"}
+          onPress={() => setFilter("instant")}
+        />
+        <Pill
+          label="Standard"
+          active={filter === "standard"}
+          onPress={() => setFilter("standard")}
+        />
+      </View>
+
+      {/* SUMMARY STRIP */}
+      <View style={styles.summaryCard}>
+        <View style={styles.summaryCol}>
+          <Text style={styles.summaryLabel}>Gross</Text>
+          <Text style={styles.summaryValue}>{formatMoney(summary.gross, currency)}</Text>
+        </View>
+
+        <View style={styles.summaryDivider} />
+
+        <View style={styles.summaryCol}>
+          <Text style={styles.summaryLabel}>Net</Text>
+          <Text style={styles.summaryValueStrong}>
+            {formatMoney(summary.net, currency)}
+          </Text>
+        </View>
+
+        <View style={styles.summaryDivider} />
+
+        <View style={styles.summaryCol}>
+          <Text style={styles.summaryLabel}>Fees</Text>
+          <Text style={styles.summaryValueFee}>
+            {formatMoney(summary.fees, currency)}
+          </Text>
+        </View>
+      </View>
+
+      <Text style={styles.taxNote}>
+        Tip: payout processing fees are typically deductible business expenses — keep records for tax season.
+      </Text>
+
+      <Text style={styles.miniMeta}>
+        Showing {summary.count} payout{summary.count === 1 ? "" : "s"} •{" "}
+        {summary.instantCount} instant • {summary.standardCount} standard
+      </Text>
+
       <FlatList
-        data={payouts}
+        data={filtered}
         keyExtractor={(item) => item.id}
         scrollEnabled={false}
         contentContainerStyle={{ paddingTop: 8 }}
-        renderItem={({ item }) => (
-          <PayoutRow payout={item} currency={currency} />
-        )}
+        renderItem={({ item }) => <PayoutRow payout={item} currency={currency} />}
         ItemSeparatorComponent={() => <View style={styles.divider} />}
       />
     </View>
@@ -169,8 +266,104 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "900",
     color: "#0F1E17",
-    marginBottom: 6,
+    marginBottom: 10,
     letterSpacing: 0.3,
+  },
+
+  pillsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
+
+  pill: {
+    paddingHorizontal: 12,
+    height: 34,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#E2EFE8",
+    backgroundColor: "#F6FBF8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  pillActive: {
+    backgroundColor: "#0F1E17",
+    borderColor: "#0F1E17",
+  },
+
+  pillText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#0F1E17",
+  },
+
+  pillTextActive: {
+    color: "#FFFFFF",
+  },
+
+  summaryCard: {
+    borderWidth: 1,
+    borderColor: "#E2EFE8",
+    backgroundColor: "#F7FBF9",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+
+  summaryCol: {
+    flex: 1,
+  },
+
+  summaryDivider: {
+    width: 1,
+    height: 34,
+    backgroundColor: "#E2EFE8",
+    marginHorizontal: 10,
+  },
+
+  summaryLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#6B8F7D",
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
+
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: "#0F1E17",
+  },
+
+  summaryValueStrong: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: "#1F7A63",
+  },
+
+  summaryValueFee: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: "#E5484D",
+  },
+
+  taxNote: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6B8F7D",
+    lineHeight: 17,
+  },
+
+  miniMeta: {
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#6B8F7D",
   },
 
   row: {

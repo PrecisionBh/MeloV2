@@ -46,7 +46,7 @@ export default function UpgradeToProButton({ variant = "full", style }: Props) {
     checkPro()
   }, [userId])
 
-  // If already Pro, hide button completely (clean UX)
+  // Hide if already Pro (clean UX)
   if (loading) {
     return (
       <View style={[styles.loadingWrap, style]}>
@@ -74,7 +74,7 @@ export default function UpgradeToProButton({ variant = "full", style }: Props) {
         activeOpacity={0.85}
       >
         <Ionicons name="diamond-outline" size={14} color="#FFD700" />
-        <Text style={styles.compactText}>Melo Pro</Text>
+        <Text style={styles.compactText}>Melo Pro • $24.99/mo</Text>
       </TouchableOpacity>
     )
   }
@@ -97,8 +97,10 @@ export default function UpgradeToProButton({ variant = "full", style }: Props) {
         {/* Text Content */}
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>Upgrade to Melo Pro</Text>
+
+          {/* 🔥 UPDATED OFFER (LOCKED IN PRICING + BENEFITS) */}
           <Text style={styles.subtitle}>
-            Unlimited listings • 10 boosts/month • Quantity selling
+            $24.99/mo • 5 Boosts + 1 Mega Boost every 30 days • Lower 3.5% seller fees • Auto payout tracking
           </Text>
         </View>
 
@@ -118,7 +120,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  /* 🔥 MAIN LUXURY PRO CARD (MATCHES SELLER HUB) */
+  /* 🔥 LUXURY PRO CARD (MATCHES MELO PREMIUM STYLE) */
   proCard: {
     borderRadius: 18,
     padding: 16,
@@ -169,8 +171,9 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 12,
     fontWeight: "600",
-    color: "rgba(255,255,255,0.65)",
-    marginTop: 2,
+    color: "rgba(255,255,255,0.72)",
+    marginTop: 3,
+    lineHeight: 17,
   },
 
   pill: {
@@ -187,7 +190,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  /* COMPACT VERSION (MATCHES DARK THEME) */
+  /* COMPACT VERSION */
   compactBtn: {
     flexDirection: "row",
     alignItems: "center",

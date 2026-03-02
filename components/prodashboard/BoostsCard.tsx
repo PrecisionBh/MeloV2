@@ -15,6 +15,7 @@ type Props = {
   boostsRemaining: number
   lastBoostReset: string | null
   onPressBoost: () => void
+  disabled?: boolean // 🔒 mirrors isPro=false behavior (like ProFeaturesCard)
 }
 
 export default function BoostsCard({
@@ -22,6 +23,7 @@ export default function BoostsCard({
   boostsRemaining,
   lastBoostReset,
   onPressBoost,
+  disabled = false,
 }: Props) {
   const [loading, setLoading] = useState(true)
   const [activeBoosts, setActiveBoosts] = useState(0)
@@ -33,11 +35,9 @@ export default function BoostsCard({
 
       try {
         setLoading(true)
-        console.log("🚀 [BOOSTS CARD] Loading boosts + mega boosts...")
-
         const now = new Date().toISOString()
 
-        // Normal Boosts
+        // Active Boosts
         const { count: boostCount } = await supabase
           .from("listings")
           .select("id", { count: "exact", head: true })
@@ -47,7 +47,7 @@ export default function BoostsCard({
 
         setActiveBoosts(boostCount ?? 0)
 
-        // Mega Boosts
+        // Active Mega Boosts
         const { count: megaCount } = await supabase
           .from("listings")
           .select("id", { count: "exact", head: true })
@@ -69,7 +69,7 @@ export default function BoostsCard({
   }, [userId])
 
   const getResetDaysText = () => {
-    if (!lastBoostReset) return "Monthly reset active"
+    if (!lastBoostReset) return "Boosts reset monthly"
 
     try {
       const last = new Date(lastBoostReset)
@@ -79,67 +79,84 @@ export default function BoostsCard({
       const diffMs = next.getTime() - Date.now()
       const days = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
 
-      return `Boosts reset in ${days} day${days === 1 ? "" : "s"}`
+      return `${days} day${days === 1 ? "" : "s"} until boosts replenish`
     } catch {
-      return "Monthly reset active"
+      return "Boosts reset monthly"
     }
   }
 
   return (
-    <View style={styles.card}>
-      {/* Header */}
+    <View style={[styles.card, disabled && styles.locked]}>
+      {/* Header (Mimics ProFeaturesCard style) */}
       <View style={styles.headerRow}>
-        <View style={styles.iconWrap}>
-          <Ionicons name="rocket-outline" size={18} color="#0F1E17" />
-        </View>
+        <Ionicons name="sparkles" size={18} color="#CFAF4A" />
         <Text style={styles.title}>Boost Power</Text>
+
+        {disabled && (
+          <View style={styles.proPill}>
+            <Text style={styles.proPillText}>PRO</Text>
+          </View>
+        )}
       </View>
 
-      {/* 👑 PILLS ROW (SIDE BY SIDE) */}
+      {/* Subtext (like Create Listing) */}
+      <Text style={styles.subtitle}>
+        {disabled
+          ? "Upgrade to Melo Pro to unlock Boost & Mega Boost visibility"
+          : `${boostsRemaining} boosts available`}
+      </Text>
+
+      {/* Pills Row */}
       <View style={styles.pillsRow}>
-        {/* Normal Boost Pill */}
-        <View style={styles.boostPill}>
-          <Ionicons name="flash-outline" size={16} color="#0F1E17" />
-          <Text style={styles.pillNumber}>{boostsRemaining}</Text>
-          <Text style={styles.pillLabel}>Boosts</Text>
+        {/* Boost Pill */}
+        <View style={styles.pillContainer}>
+          <View style={styles.boostPill}>
+            <Ionicons name="flash-outline" size={16} color="#0F1E17" />
+            <Text style={styles.pillNumber}>{boostsRemaining}</Text>
+            <Text style={styles.pillLabel}>Boosts</Text>
+          </View>
+
+          {loading ? (
+            <ActivityIndicator style={{ marginTop: 6 }} size="small" />
+          ) : (
+            <Text style={styles.activeText}>
+              {activeBoosts} active boosts
+            </Text>
+          )}
         </View>
 
-        {/* Mega Boost Pill (GOLD + GLOW) */}
-        <View style={styles.megaPill}>
-          <Ionicons name="star" size={16} color="#E6C200" />
-          <Text style={styles.megaPillNumber}>
-            {activeMegaBoosts}
-          </Text>
-          <Text style={styles.megaPillLabel}>Mega</Text>
+        {/* Mega Boost Pill */}
+        <View style={styles.pillContainer}>
+          <View style={styles.megaPill}>
+            <Ionicons name="star-outline" size={16} color="#CFAF4A" />
+            <Text style={styles.megaPillNumber}>{activeMegaBoosts}</Text>
+            <Text style={styles.megaPillLabel}>Mega</Text>
+          </View>
+
+          {loading ? (
+            <ActivityIndicator style={{ marginTop: 6 }} size="small" />
+          ) : (
+            <Text style={styles.activeText}>
+              {activeMegaBoosts} active mega boosts
+            </Text>
+          )}
         </View>
       </View>
 
-      {/* Sub Stats (Smaller + Clean) */}
-      {loading ? (
-        <ActivityIndicator style={{ marginTop: 10 }} size="small" />
-      ) : (
-        <View style={styles.subStatsWrap}>
-          <Text style={styles.subText}>
-            {activeBoosts} Active Boosted Listing
-            {activeBoosts === 1 ? "" : "s"}
-          </Text>
-
-          <Text style={styles.subText}>
-            {activeMegaBoosts} Active Mega Boost
-            {activeMegaBoosts === 1 ? "" : "s"}
-          </Text>
-        </View>
-      )}
-
+      {/* Reset Timer */}
       <Text style={styles.resetText}>{getResetDaysText()}</Text>
 
-      {/* CTA */}
+      {/* CTA (disabled like Switch/Input in ProFeaturesCard) */}
       <TouchableOpacity
-        style={styles.boostButton}
+        style={[
+          styles.boostButton,
+          disabled && styles.boostButtonDisabled,
+        ]}
         activeOpacity={0.9}
-        onPress={onPressBoost}
+        onPress={disabled ? undefined : onPressBoost}
+        disabled={disabled}
       >
-        <Ionicons name="flash-outline" size={18} color="#0F1E17" />
+        <Ionicons name="flash" size={18} color="#CFAF4A" />
         <Text style={styles.boostButtonText}>Boost a Listing</Text>
       </TouchableOpacity>
     </View>
@@ -147,6 +164,7 @@ export default function BoostsCard({
 }
 
 const styles = StyleSheet.create({
+  /* Container EXACTLY mimics ProFeaturesCard locking style */
   card: {
     marginTop: 14,
     marginHorizontal: 16,
@@ -154,27 +172,24 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#E6EFEA",
+    borderColor: "rgba(214,179,90,0.55)",
     shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
+  },
+
+  /* 🔒 THIS is the magic (same as create-listing) */
+  locked: {
+    opacity: 0.7,
   },
 
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-  },
-
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: "#EAF4EF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
+    gap: 8,
+    marginBottom: 6,
   },
 
   title: {
@@ -183,101 +198,125 @@ const styles = StyleSheet.create({
     color: "#0F1E17",
   },
 
-  /* 👑 PILLS */
+  proPill: {
+    marginLeft: "auto",
+    backgroundColor: "#CFAF4A",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+
+  proPillText: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: "#0F1E17",
+  },
+
+  subtitle: {
+    fontSize: 12,
+    color: "#6B8F7D",
+    marginBottom: 14,
+    fontWeight: "600",
+  },
+
   pillsRow: {
-    marginTop: 14,
     flexDirection: "row",
     gap: 12,
+    paddingHorizontal: 4,
+  },
+
+  pillContainer: {
+    flex: 1,
+    alignItems: "center",
   },
 
   boostPill: {
-    flex: 1,
+    width: "100%",
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(15,30,23,0.10)",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: "#EAF4EF",
   },
 
   megaPill: {
-    flex: 1,
+    width: "100%",
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(214,179,90,0.45)",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: "#FFF9E6",
-    borderWidth: 1.5,
-    borderColor: "#E6C200",
-    shadowColor: "#E6C200",
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 4,
   },
 
   pillNumber: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "900",
     color: "#0F1E17",
   },
 
   pillLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     color: "#0F1E17",
     opacity: 0.7,
   },
 
   megaPillNumber: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "900",
-    color: "#B89600",
+    color: "#CFAF4A",
   },
 
   megaPillLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "900",
-    color: "#B89600",
+    color: "#CFAF4A",
   },
 
-  subStatsWrap: {
-    marginTop: 10,
-  },
-
-  subText: {
+  activeText: {
+    marginTop: 6,
     fontSize: 12,
     fontWeight: "700",
-    color: "#2C3E35",
-    opacity: 0.85,
-    marginTop: 2,
+    color: "#6B8F7D",
+    textAlign: "center",
   },
 
   resetText: {
-    marginTop: 6,
-    fontSize: 11,
+    marginTop: 12,
+    fontSize: 12,
     fontWeight: "700",
-    color: "#0F1E17",
-    opacity: 0.55,
+    color: "#6B8F7D",
+    textAlign: "center",
   },
 
   boostButton: {
-    marginTop: 14,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: "#7FAF9B",
+    marginTop: 16,
+    height: 48,
+    borderRadius: 18,
+    backgroundColor: "#0B0F0D",
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "rgba(214,179,90,0.65)",
+  },
+
+  boostButtonDisabled: {
+    opacity: 0.5,
   },
 
   boostButtonText: {
     fontSize: 14,
     fontWeight: "900",
-    color: "#0F1E17",
+    color: "#CFAF4A",
   },
 })

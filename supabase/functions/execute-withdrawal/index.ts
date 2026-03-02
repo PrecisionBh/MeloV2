@@ -14,21 +14,42 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 )
 
+/* ---------------- CORS ---------------- */
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+}
+
 /* ---------------- FEE RULES ---------------- */
 
 const FEE_RATE = 0.03
-const FEE_MIN = 75     // $0.75
-const FEE_CAP = 2500   // $25.00
+const FEE_MIN = 75 // $0.75
+const FEE_CAP = 2500 // $25.00
 
 Deno.serve(async (req) => {
+  // ✅ CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders })
+  }
+
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: corsHeaders,
+    })
+  }
+
   console.log("➡️ Incoming withdrawal request")
 
-  let body
+  let body: any
   try {
     body = await req.json()
   } catch {
     console.error("❌ Invalid JSON body")
-    return new Response("Invalid JSON body", { status: 400 })
+    return new Response("Invalid JSON body", { status: 400, headers: corsHeaders })
   }
 
   const { user_id, amount_cents, payout_type } = body
@@ -37,7 +58,12 @@ Deno.serve(async (req) => {
 
   if (!user_id || !amount_cents || !payout_type) {
     console.error("❌ Missing parameters")
-    return new Response("Missing parameters", { status: 400 })
+    return new Response("Missing parameters", { status: 400, headers: corsHeaders })
+  }
+
+  if (payout_type !== "instant" && payout_type !== "standard") {
+    console.error("❌ Invalid payout_type")
+    return new Response("Invalid payout_type", { status: 400, headers: corsHeaders })
   }
 
   /* ---------- Load wallet ---------- */
@@ -51,7 +77,7 @@ Deno.serve(async (req) => {
 
   if (walletErr || !wallet) {
     console.error("❌ Wallet not found", walletErr)
-    return new Response("Wallet not found", { status: 404 })
+    return new Response("Wallet not found", { status: 404, headers: corsHeaders })
   }
 
   console.log("💼 Wallet loaded", {
@@ -62,7 +88,7 @@ Deno.serve(async (req) => {
 
   if (wallet.payout_locked) {
     console.error("⛔ Wallet is locked")
-    return new Response("Wallet locked", { status: 409 })
+    return new Response("Wallet locked", { status: 409, headers: corsHeaders })
   }
 
   if (amount_cents > wallet.available_balance_cents) {
@@ -70,16 +96,24 @@ Deno.serve(async (req) => {
       requested: amount_cents,
       available: wallet.available_balance_cents,
     })
-    return new Response("Insufficient funds", { status: 400 })
+    return new Response("Insufficient funds", { status: 400, headers: corsHeaders })
   }
 
   /* ---------- Lock wallet ---------- */
   console.log("🔒 Locking wallet")
 
-  await supabase
+  const { error: lockErr } = await supabase
     .from("wallets")
     .update({ payout_locked: true })
     .eq("id", wallet.id)
+
+  if (lockErr) {
+    console.error("❌ Failed to lock wallet", lockErr)
+    return new Response("Failed to lock wallet", { status: 500, headers: corsHeaders })
+  }
+
+  // We will unlock in finally/catch.
+  let createdStripePayoutId: string | null = null
 
   try {
     /* ---------- Stripe account ---------- */
@@ -116,11 +150,7 @@ Deno.serve(async (req) => {
       payout_type,
     })
 
-    /* =====================================================
-       ✅ ADDITION: TAKE INSTANT FEE AT PAYOUT TIME (MERCARI STYLE)
-       - Transfer fee from connected account → platform account
-       - Then payout net_cents
-       ===================================================== */
+    /* ---------- Collect instant fee via transfer ---------- */
     if (payout_type === "instant" && fee_cents > 0) {
       const platformAccountId = Deno.env.get("STRIPE_PLATFORM_ACCOUNT_ID")
       if (!platformAccountId) {
@@ -150,7 +180,6 @@ Deno.serve(async (req) => {
 
       console.log("✅ Instant fee transferred to platform")
     }
-    /* ===================================================== */
 
     /* ---------- Stripe payout ---------- */
     console.log("💸 Creating Stripe payout")
@@ -169,71 +198,110 @@ Deno.serve(async (req) => {
       { stripeAccount: profile.stripe_account_id }
     )
 
+    createdStripePayoutId = payout.id
+
     console.log("✅ Stripe payout created", {
       payout_id: payout.id,
       status: payout.status,
     })
 
-    /* ---------- Update wallet ---------- */
+    /* ---------- Record payout (MUST SUCCEED) ---------- */
+    console.log("📝 Recording payout in DB")
+
+    const { error: payoutInsertErr } = await supabase.from("payouts").upsert(
+      {
+        user_id,
+        wallet_id: wallet.id,
+        amount_cents,
+        fee_cents,
+        net_cents,
+        method: payout_type, // "instant" | "standard"
+        stripe_payout_id: payout.id,
+        status: payout.status ?? "pending",
+      },
+      {
+        // ✅ prevents duplicates if function is re-tried
+        onConflict: "stripe_payout_id",
+      }
+    )
+
+    if (payoutInsertErr) {
+      console.error("❌ Failed to record payout row", payoutInsertErr)
+      // Stripe payout already created; we STILL must surface failure so you can fix immediately.
+      throw new Error("Failed to record payout row")
+    }
+
+    console.log("✅ Payout row recorded")
+
+    /* ---------- Record wallet transaction ---------- */
+    console.log("🧾 Recording wallet transaction")
+
+    const { error: txErr } = await supabase.from("wallet_transactions").insert({
+      wallet_id: wallet.id,
+      user_id,
+      type: "withdrawal",
+      direction: "debit",
+      amount_cents,
+      status: "completed",
+      description: "Seller withdrawal",
+    })
+
+    if (txErr) {
+      // Non-blocking, but we WANT to see it
+      console.error("⚠️ Wallet transaction log failed (non-blocking)", txErr)
+    }
+
+    /* ---------- Update wallet balance (gross leaves available balance) ---------- */
     console.log("📉 Updating wallet balance")
 
-    await supabase
+    const { error: walletUpdateErr } = await supabase
       .from("wallets")
       .update({
-        available_balance_cents:
-          wallet.available_balance_cents - amount_cents,
+        available_balance_cents: wallet.available_balance_cents - amount_cents,
         payout_locked: false,
         updated_at: new Date().toISOString(),
       })
       .eq("id", wallet.id)
 
-    console.log("✅ Wallet updated")
-
-    /* ---------- Record payout ---------- */
-    console.log("📝 Recording payout")
-
-    await supabase.from("payouts").insert({
-      user_id,
-      wallet_id: wallet.id,
-      amount_cents,
-      fee_cents,
-      net_cents,
-      method: payout_type,
-      stripe_payout_id: payout.id,
-      status: payout.status, 
-    })
-
-    /* ---------- Record wallet transaction (MVP withdrawal tracking) ---------- */
-    try {
-      await supabase.from("wallet_transactions").insert({
-        wallet_id: wallet.id,
-        user_id,
-        type: "withdrawal",
-        direction: "debit",
-        amount_cents,
-        status: "completed",
-        description: "Seller withdrawal",
-      })
-    } catch (logErr) {
-      console.error("⚠️ Wallet transaction log failed (non-blocking)", logErr)
+    if (walletUpdateErr) {
+      console.error("❌ Wallet update failed AFTER payout", walletUpdateErr)
+      // payout row exists; wallet update failed needs immediate visibility
+      throw new Error("Wallet update failed")
     }
+
+    console.log("✅ Wallet updated")
 
     console.log("🏁 Withdrawal completed successfully")
 
-    return Response.json({
-      success: true,
-      payout_id: payout.id,
-    })
+    return new Response(
+      JSON.stringify({
+        success: true,
+        payout_id: payout.id,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    )
   } catch (err) {
     console.error("🔥 Withdrawal failed", err)
 
+    // Always unlock wallet on failure
     console.log("🔓 Unlocking wallet after failure")
 
-    await supabase
+    const { error: unlockErr } = await supabase
       .from("wallets")
       .update({ payout_locked: false })
       .eq("id", wallet.id)
 
-    return new Response("Withdrawal failed", { status: 500 })
+    if (unlockErr) {
+      console.error("❌ Failed to unlock wallet", unlockErr)
+    }
+
+    // If Stripe payout succeeded but we failed after, return the payout id to help debugging
+    return new Response(
+      JSON.stringify({
+        error: "Withdrawal failed",
+        stripe_payout_id: createdStripePayoutId,
+      }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    )
   }
 })
