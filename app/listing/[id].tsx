@@ -316,7 +316,7 @@ export default function ListingDetailScreen() {
 
   return (
     <View style={styles.screen}>
-      <AppHeader title="Listing" backRoute="/" />
+      <AppHeader title="Listing" backRoute="/home" />
 
       <ScrollView contentContainerStyle={{ paddingBottom: 160 }}>
         {/* IMAGE GALLERY */}

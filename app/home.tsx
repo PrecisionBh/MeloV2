@@ -65,6 +65,7 @@ export default function HomeScreen() {
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [scrollOffset, setScrollOffset] = useState(0) // 🧠 CACHE SCROLL POSITION
 
   const [search, setSearch] = useState("")
   const [activeCategory, setActiveCategory] =
@@ -127,19 +128,17 @@ export default function HomeScreen() {
   }, [])
 
   useFocusEffect(
-    useCallback(() => {
-      const init = async () => {
-        // 🔥 Load listings first (what users actually see)
-        await loadListings()
+  useCallback(() => {
+    // 🔥 DO NOT reload listings if we already have them (prevents scroll reset)
+    if (listings.length === 0) {
+      loadListings()
+    }
 
-        // 🟡 Then fetch lightweight badge data in background
-        checkUnreadMessages()
-        checkUnreadNotifications()
-      }
-
-      init()
-    }, []) // ✅ REMOVED activeCategory dependency (restores fast pills)
-  )
+    // Lightweight background checks only
+    checkUnreadMessages()
+    checkUnreadNotifications()
+  }, [listings.length])
+)
 
   const loadListings = async () => {
     // 🔥 Only show spinner on cold start (keeps UI visible on refresh)
@@ -528,7 +527,9 @@ const filteredListings = useMemo(() => {
   refreshing={refreshing}
   onRefresh={refreshListings}
   showUpgradeRow={!isPro}
-  megaBoostListings={megaBoostListings} // 👑 THIS LINE ONLY
+  megaBoostListings={megaBoostListings}
+  initialScrollOffset={scrollOffset} // 🧠 RESTORE POSITION
+  onScrollOffsetChange={setScrollOffset} // 🧠 SAVE POSITION
 />
         )}
 

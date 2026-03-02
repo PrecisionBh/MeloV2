@@ -1,13 +1,16 @@
-import { useRouter } from "expo-router";
+import { useRouter } from "expo-router"
+import { useEffect, useRef } from "react"
 import {
   FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   RefreshControl,
   StyleSheet,
   View,
-} from "react-native";
+} from "react-native"
 
-import UpgradeToProButton from "../pro/UpgradeToProButton";
-import ListingCard, { Listing } from "./ListingCard";
+import UpgradeToProButton from "../pro/UpgradeToProButton"
+import ListingCard, { Listing } from "./ListingCard"
 import MegaBoostBlock from "./MegaBoostBlock"; // 👑 NEW
 
 /* 🧠 DEBUG IMPORT LOGS (CRITICAL FOR INVALID ELEMENT ERROR) */
@@ -24,6 +27,8 @@ type Props = {
   onRefresh: () => void
   showUpgradeRow?: boolean
   megaBoostListings?: Listing[] // 👑 NEW
+  onScrollOffsetChange?: (y: number) => void // 🧠 cache scroll
+  initialScrollOffset?: number // 🧠 restore scroll
 }
 
 type GridRowItem =
@@ -39,16 +44,23 @@ export default function ListingsGrid({
   onRefresh,
   showUpgradeRow = false,
   megaBoostListings = [],
+  onScrollOffsetChange,
+  initialScrollOffset = 0,
 }: Props) {
   const router = useRouter()
+
+  // 🧠 CRITICAL: FlatList ref for REAL scroll restoration (NOT initialScrollOffset)
+  const flatListRef = useRef<FlatList<GridRowItem>>(null)
+  const hasRestoredScroll = useRef(false)
 
   console.log("📦 ListingsGrid render start")
   console.log("📦 listings length:", listings?.length)
   console.log("📦 megaBoostListings length:", megaBoostListings?.length)
   console.log("📦 showUpgradeRow:", showUpgradeRow)
+  console.log("🧠 initialScrollOffset:", initialScrollOffset)
 
   const NUM_COLUMNS = 3
-  const MEGA_BOOST_FREQUENCY =  6 // 👑 Every 8th row
+  const MEGA_BOOST_FREQUENCY = 6 // 👑 Every 6th row
 
   // ✅ Build rows of 3 listings each
   const baseRows: GridRowItem[] = []
@@ -65,7 +77,7 @@ export default function ListingsGrid({
 
   console.log("🧱 Base rows built:", baseRows.length)
 
-  // 👑 Inject Mega Boost rows every 8th row (without breaking grid)
+  // 👑 Inject Mega Boost rows every Nth row (without breaking grid)
   const rows: GridRowItem[] = []
   let megaIndex = 0
 
@@ -104,12 +116,39 @@ export default function ListingsGrid({
 
   console.log("📦 Final rows count:", rows.length)
 
+  /* 🧠 RESTORE SCROLL POSITION AFTER DATA IS READY (MARKETPLACE-GRADE FIX) */
+  useEffect(() => {
+    if (!flatListRef.current) return
+    if (hasRestoredScroll.current) return
+    if (rows.length === 0) return
+    if (!initialScrollOffset || initialScrollOffset <= 0) return
+
+    console.log("🧠 Restoring scroll to:", initialScrollOffset)
+
+    // Delay ensures FlatList layout is calculated
+    const timeout = setTimeout(() => {
+      flatListRef.current?.scrollToOffset({
+        offset: initialScrollOffset,
+        animated: false,
+      })
+      hasRestoredScroll.current = true
+    }, 50)
+
+    return () => clearTimeout(timeout)
+  }, [rows.length, initialScrollOffset])
+
   return (
     <FlatList
+      ref={flatListRef} // 🧠 REQUIRED for true scroll restore
       data={rows}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.grid}
       showsVerticalScrollIndicator={false}
+      scrollEventThrottle={16} // 60fps scroll tracking
+      onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+        const y = e.nativeEvent.contentOffset.y
+        onScrollOffsetChange?.(y) // 🧠 SAVE scroll position in cache
+      }}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -121,11 +160,8 @@ export default function ListingsGrid({
         console.log("🧩 Rendering item index:", index, "type:", item.type)
 
         try {
-          // 👑 FULL WIDTH MEGA BOOST BLOCK (2 ROW / 6 CARDS)
+          // 👑 FULL WIDTH MEGA BOOST BLOCK
           if (item.type === "mega_boost") {
-            console.log("👑 Rendering MegaBoostBlock with listings:", item.listings?.length)
-            console.log("👑 MegaBoostBlock component type:", MegaBoostBlock)
-
             return (
               <View style={styles.fullRow}>
                 <MegaBoostBlock listings={item.listings} />
@@ -133,11 +169,8 @@ export default function ListingsGrid({
             )
           }
 
-          // ✅ FULL WIDTH PRO ROW
+          // ⭐ FULL WIDTH UPGRADE ROW
           if (item.type === "upgrade_row") {
-            console.log("⭐ Rendering UpgradeToProButton")
-            console.log("⭐ UpgradeToProButton type:", UpgradeToProButton)
-
             return (
               <View style={styles.fullRow}>
                 <UpgradeToProButton />
@@ -145,38 +178,28 @@ export default function ListingsGrid({
             )
           }
 
-          // ✅ NORMAL 3-COLUMN ROW
-          console.log("🃏 Rendering standard row with cards:", item.listings?.length)
-          console.log("🃏 ListingCard component type:", ListingCard)
-
+          // 🃏 NORMAL 3-COLUMN ROW
           return (
             <View style={styles.row}>
-              {item.listings.map((l, cardIndex) => {
-                console.log("🃏 Rendering ListingCard:", l?.id, "at position:", cardIndex)
+              {item.listings.map((l, cardIndex) => (
+                <View key={l.id} style={styles.cardWrap}>
+                  <ListingCard
+                    listing={l}
+                    onPress={() => router.push(`/listing/${l.id}`)}
+                  />
+                </View>
+              ))}
 
-                return (
-                  <View key={l.id} style={styles.cardWrap}>
-                    <ListingCard
-                      listing={l}
-                      onPress={() => router.push(`/listing/${l.id}`)}
-                    />
-                  </View>
-                )
-              })}
-
-              {/* ✅ Fill empty columns to keep spacing perfect */}
+              {/* Fill empty columns for perfect grid spacing */}
               {item.listings.length < NUM_COLUMNS
-                ? Array.from({ length: NUM_COLUMNS - item.listings.length }).map(
-                    (_, idx) => {
-                      console.log("⬜ Rendering spacer:", idx)
-                      return (
-                        <View
-                          key={`spacer-${item.id}-${idx}`}
-                          style={styles.cardWrap}
-                        />
-                      )
-                    }
-                  )
+                ? Array.from({
+                    length: NUM_COLUMNS - item.listings.length,
+                  }).map((_, idx) => (
+                    <View
+                      key={`spacer-${item.id}-${idx}`}
+                      style={styles.cardWrap}
+                    />
+                  ))
                 : null}
             </View>
           )
