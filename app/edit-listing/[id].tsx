@@ -1,4 +1,5 @@
 // app/edit-listing.tsx (IDENTICAL UI TO CREATE LISTING — EDIT MODE)
+
 import AppHeader from "@/components/app-header"
 import CategoryBrandConditionSection from "@/components/create-listing/CategoryBrandConditionSection"
 import CreateListingFooter from "@/components/create-listing/CreateListingFooter"
@@ -26,10 +27,11 @@ import {
 type ProfileRow = {
   is_pro: boolean | null
   boosts_remaining: number | null
-  mega_boosts_remaining: number | null // 👑 NEW (matches create page)
+  mega_boosts_remaining: number | null
 }
 
 /* ---------------- SAME SELECTOR DATA AS CREATE ---------------- */
+
 const CATEGORIES = [
   { label: "Playing Cues", value: "playing_cue" },
   { label: "Custom Cues", value: "custom_cue" },
@@ -86,13 +88,16 @@ export default function EditListingScreen() {
   const [showConditionModal, setShowConditionModal] = useState(false)
 
   const [isBoosted, setIsBoosted] = useState(false)
-  const [isMegaBoosted, setIsMegaBoosted] = useState(false) // 👑 NEW
+  const [isMegaBoosted, setIsMegaBoosted] = useState(false)
+
   const [quantity, setQuantity] = useState("1")
-  const [boostsRemaining, setBoostsRemaining] = useState<number>(0)
-  const [megaBoostsRemaining, setMegaBoostsRemaining] = useState<number>(0) // 👑 NEW
+
+  const [boostsRemaining, setBoostsRemaining] = useState(0)
+  const [megaBoostsRemaining, setMegaBoostsRemaining] = useState(0)
 
   const [shippingType, setShippingType] =
     useState<"seller_pays" | "buyer_pays" | null>(null)
+
   const [shippingPrice, setShippingPrice] = useState("")
 
   const [price, setPrice] = useState("")
@@ -104,9 +109,10 @@ export default function EditListingScreen() {
   const [showAddressModal, setShowAddressModal] = useState(false)
 
   const [checkingPro, setCheckingPro] = useState(true)
-  const [isPro, setIsPro] = useState<boolean>(false)
+  const [isPro, setIsPro] = useState(false)
 
   /* ---------------- LOAD EXISTING LISTING ---------------- */
+
   useEffect(() => {
     if (id) loadListing()
   }, [id])
@@ -135,8 +141,12 @@ export default function EditListingScreen() {
       setShippingPrice(data.shipping_price ? String(data.shipping_price) : "")
       setImages(data.image_urls ?? [])
 
+      setIsBoosted(Boolean(data.is_boosted))
+      setIsMegaBoosted(Boolean(data.is_mega_boost))
+
       const safeLoadedQty =
         data.quantity && data.quantity > 0 ? data.quantity : 1
+
       setQuantity(String(safeLoadedQty))
     } catch (err) {
       handleAppError(err, {
@@ -148,7 +158,8 @@ export default function EditListingScreen() {
     }
   }
 
-  /* ---------------- UPDATE LISTING (NOW WITH MEGA BOOST SUPPORT) ---------------- */
+  /* ---------------- UPDATE LISTING ---------------- */
+
   const handleUpdateListing = async () => {
     if (!session?.user || !id || submitting) return
 
@@ -169,13 +180,6 @@ export default function EditListingScreen() {
         return
       }
 
-      const now = new Date()
-      const boostExpires = new Date(now)
-      boostExpires.setDate(now.getDate() + 7)
-
-      const megaExpires = new Date(now)
-      megaExpires.setDate(now.getDate() + 14)
-
       const updatePayload: any = {
         title: title.trim(),
         description: description.trim() || null,
@@ -192,25 +196,28 @@ export default function EditListingScreen() {
         quantity_available: safeQuantity,
       }
 
-      // 👑 MEGA BOOST TAKES PRIORITY (cannot stack with normal boost)
-      if (isPro && isMegaBoosted) {
-        updatePayload.is_mega_boost = true
-        updatePayload.mega_boost_expires_at = megaExpires.toISOString()
-        updatePayload.is_boosted = false
-        updatePayload.boost_expires_at = null
-      } else if (isPro && isBoosted) {
-        updatePayload.is_boosted = true
-        updatePayload.boost_expires_at = boostExpires.toISOString()
-        updatePayload.is_mega_boost = false
-        updatePayload.mega_boost_expires_at = null
-      }
-
       const { error } = await supabase
         .from("listings")
         .update(updatePayload)
         .eq("id", id)
 
       if (error) throw error
+
+      /* BOOST SYSTEM MATCH CREATE PAGE */
+
+     if (isPro && id) {
+  if (isMegaBoosted) {
+    await supabase.rpc("mega_boost_listing", {
+      listing_id: id,
+      user_id: session.user.id,
+    })
+  } else if (isBoosted) {
+    await supabase.rpc("boost_listing", {
+      listing_id: id,
+      user_id: session.user.id,
+    })
+  }
+}
 
       Alert.alert("Success", "Listing updated successfully!")
       router.back()
@@ -225,6 +232,7 @@ export default function EditListingScreen() {
   }
 
   /* ---------------- SAME GUARDS AS CREATE ---------------- */
+
   useFocusEffect(
     useCallback(() => {
       const loadGuards = async () => {
@@ -309,9 +317,15 @@ export default function EditListingScreen() {
               boostsRemaining={boostsRemaining}
               megaBoostsRemaining={megaBoostsRemaining}
               isBoosted={isBoosted}
-              setIsBoosted={setIsBoosted}
+              setIsBoosted={(val: boolean) => {
+                setIsBoosted(val)
+                if (val) setIsMegaBoosted(false)
+              }}
               isMegaBoosted={isMegaBoosted}
-              setIsMegaBoosted={setIsMegaBoosted}
+              setIsMegaBoosted={(val: boolean) => {
+                setIsMegaBoosted(val)
+                if (val) setIsBoosted(false)
+              }}
               megaBoostDescription="Take over the home page in one listing."
               quantity={quantity}
               setQuantity={setQuantity}

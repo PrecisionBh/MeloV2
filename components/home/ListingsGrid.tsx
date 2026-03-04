@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router"
-import { useEffect, useRef } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import {
   FlatList,
   NativeScrollEvent,
@@ -11,7 +11,7 @@ import {
 
 import UpgradeToProButton from "../pro/UpgradeToProButton"
 import ListingCard, { Listing } from "./ListingCard"
-import MegaBoostBlock from "./MegaBoostBlock"; // 👑 NEW
+import MegaBoostBlock from "./MegaBoostBlock"
 
 /* ---------------- TYPES ---------------- */
 
@@ -20,15 +20,28 @@ type Props = {
   refreshing: boolean
   onRefresh: () => void
   showUpgradeRow?: boolean
-  megaBoostListings?: Listing[] // 👑 NEW
-  onScrollOffsetChange?: (y: number) => void // 🧠 cache scroll
-  initialScrollOffset?: number // 🧠 restore scroll
+  megaBoostListings?: Listing[]
+  onScrollOffsetChange?: (y: number) => void
+  initialScrollOffset?: number
 }
 
 type GridRowItem =
   | { type: "row"; id: string; listings: Listing[] }
   | { type: "upgrade_row"; id: string }
-  | { type: "mega_boost"; id: string; listings: Listing[] } // 👑 NEW
+  | { type: "mega_boost"; id: string; listings: Listing[] }
+
+/* ---------------- HELPERS ---------------- */
+
+function shuffleArray<T>(array: T[]): T[] {
+  const copy = [...array]
+
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+
+  return copy
+}
 
 /* ---------------- COMPONENT ---------------- */
 
@@ -43,19 +56,31 @@ export default function ListingsGrid({
 }: Props) {
   const router = useRouter()
 
-  // 🧠 CRITICAL: FlatList ref for REAL scroll restoration (NOT initialScrollOffset)
   const flatListRef = useRef<FlatList<GridRowItem>>(null)
   const hasRestoredScroll = useRef(false)
 
   const NUM_COLUMNS = 3
-  const MEGA_BOOST_FREQUENCY = 6 // 👑 Every 6th row
+  const MEGA_BOOST_FREQUENCY = 4
 
-  // ✅ Build rows of 3 listings each
+  /* 🧠 SHUFFLE MEGA BOOSTS ONLY WHEN DATA CHANGES */
+
+  const shuffledMegaBoosts = useMemo(() => {
+    return shuffleArray(megaBoostListings)
+  }, [megaBoostListings])
+
+  /* ---------------- REMOVE MEGA BOOST LISTINGS FROM NORMAL GRID ---------------- */
+
+  const megaIds = new Set(megaBoostListings.map((l) => l.id))
+  const filteredListings = listings.filter((l) => !megaIds.has(l.id))
+
+  /* ---------------- BUILD NORMAL GRID ROWS ---------------- */
+
   const baseRows: GridRowItem[] = []
   let rowIndex = 0
 
-  for (let i = 0; i < listings.length; i += NUM_COLUMNS) {
-    const chunk = listings.slice(i, i + NUM_COLUMNS)
+  for (let i = 0; i < filteredListings.length; i += NUM_COLUMNS) {
+    const chunk = filteredListings.slice(i, i + NUM_COLUMNS)
+
     baseRows.push({
       type: "row",
       id: `row-${rowIndex++}`,
@@ -63,7 +88,8 @@ export default function ListingsGrid({
     })
   }
 
-  // 👑 Inject Mega Boost rows every Nth row (without breaking grid)
+  /* ---------------- INJECT MEGA BOOST ROWS ---------------- */
+
   const rows: GridRowItem[] = []
   let megaIndex = 0
 
@@ -71,39 +97,51 @@ export default function ListingsGrid({
     rows.push(row)
 
     const shouldInsertMega =
-      megaBoostListings.length > 0 &&
+      shuffledMegaBoosts.length > 0 &&
       (index + 1) % MEGA_BOOST_FREQUENCY === 0
 
-    if (shouldInsertMega) {
-      const sliceStart = megaIndex * 6
-      const sliceEnd = sliceStart + 6
-      const megaSlice = megaBoostListings.slice(sliceStart, sliceEnd)
+    if (shouldInsertMega && megaIndex < shuffledMegaBoosts.length) {
+      const megaSlice = shuffledMegaBoosts.slice(megaIndex, megaIndex + 1)
 
-      if (megaSlice.length > 0) {
-        rows.push({
-          type: "mega_boost",
-          id: `mega-boost-${index}`,
-          listings: megaSlice,
-        })
-        megaIndex++
-      }
+      rows.push({
+        type: "mega_boost",
+        id: `mega-boost-${index}`,
+        listings: megaSlice,
+      })
+
+      megaIndex++
     }
   })
 
-  // ✅ Insert Upgrade row at 5th row position (index 4)
+  /* 🔥 FALLBACK INSERTION (if feed is small) */
+
+  while (megaIndex < shuffledMegaBoosts.length) {
+    const megaSlice = shuffledMegaBoosts.slice(megaIndex, megaIndex + 1)
+
+    rows.push({
+      type: "mega_boost",
+      id: `mega-boost-fallback-${megaIndex}`,
+      listings: megaSlice,
+    })
+
+    megaIndex++
+  }
+
+  /* ---------------- INSERT UPGRADE ROW ---------------- */
+
   if (showUpgradeRow) {
     const insertAt = Math.min(4, rows.length)
     rows.splice(insertAt, 0, { type: "upgrade_row", id: "upgrade-row" })
   }
 
-  /* 🧠 RESTORE SCROLL POSITION AFTER DATA IS READY (MARKETPLACE-GRADE FIX) */
+  /* 🧠 RESTORE SCROLL POSITION */
+
   useEffect(() => {
     if (!flatListRef.current) return
     if (hasRestoredScroll.current) return
     if (rows.length === 0) return
     if (!initialScrollOffset || initialScrollOffset <= 0) return
 
-    // Delay ensures FlatList layout is calculated
     const timeout = setTimeout(() => {
       flatListRef.current?.scrollToOffset({
         offset: initialScrollOffset,
@@ -117,15 +155,15 @@ export default function ListingsGrid({
 
   return (
     <FlatList
-      ref={flatListRef} // 🧠 REQUIRED for true scroll restore
+      ref={flatListRef}
       data={rows}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.grid}
       showsVerticalScrollIndicator={false}
-      scrollEventThrottle={16} // 60fps scroll tracking
+      scrollEventThrottle={16}
       onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
         const y = e.nativeEvent.contentOffset.y
-        onScrollOffsetChange?.(y) // 🧠 SAVE scroll position in cache
+        onScrollOffsetChange?.(y)
       }}
       refreshControl={
         <RefreshControl
@@ -134,10 +172,8 @@ export default function ListingsGrid({
           tintColor="#0F1E17"
         />
       }
-      renderItem={({ item, index }) => {
-
+      renderItem={({ item }) => {
         try {
-          // 👑 FULL WIDTH MEGA BOOST BLOCK
           if (item.type === "mega_boost") {
             return (
               <View style={styles.fullRow}>
@@ -146,7 +182,6 @@ export default function ListingsGrid({
             )
           }
 
-          // ⭐ FULL WIDTH UPGRADE ROW
           if (item.type === "upgrade_row") {
             return (
               <View style={styles.fullRow}>
@@ -155,10 +190,9 @@ export default function ListingsGrid({
             )
           }
 
-          // 🃏 NORMAL 3-COLUMN ROW
           return (
             <View style={styles.row}>
-              {item.listings.map((l, cardIndex) => (
+              {item.listings.map((l) => (
                 <View key={l.id} style={styles.cardWrap}>
                   <ListingCard
                     listing={l}
@@ -167,7 +201,6 @@ export default function ListingsGrid({
                 </View>
               ))}
 
-              {/* Fill empty columns for perfect grid spacing */}
               {item.listings.length < NUM_COLUMNS
                 ? Array.from({
                     length: NUM_COLUMNS - item.listings.length,
@@ -180,7 +213,7 @@ export default function ListingsGrid({
                 : null}
             </View>
           )
-        } catch (err) {
+        } catch {
           return null
         }
       }}

@@ -36,37 +36,55 @@ useFocusEffect(
     console.log("🔄 SellerHub focused — refreshing everything")
 
     // 🔥 Fire escrow/return triggers (non-blocking)
-    ;(async () => {
-      try {
-        const base = process.env.EXPO_PUBLIC_SUPABASE_URL
+   ;(async () => {
+  try {
+    const base = process.env.EXPO_PUBLIC_SUPABASE_URL
 
-        fetch(`${base}/functions/v1/auto-release-escrow`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-cron-secret": "Auto_Release_Escrow_2026",
-          },
-        })
+    console.log("🔥 Triggering escrow auto release")
 
-        fetch(`${base}/functions/v1/auto-release-return`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-cron-secret": "Auto_Release_Escrow_2026",
-          },
-        })
+    const escrowRes = await fetch(`${base}/functions/v1/auto-release-escrow`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-cron-secret": "Auto_Release_Escrow_2026",
+      },
+    })
 
-        fetch(`${base}/functions/v1/auto-non-return-release`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-cron-secret": "Auto_Release_Escrow_2026",
-          },
-        })
-      } catch (err) {
-        console.log("⚠ Escrow trigger error:", err)
+    console.log("Escrow release status:", escrowRes.status)
+    console.log("Escrow release response:", await escrowRes.text())
+
+    console.log("🔁 Triggering return auto refund")
+
+    const returnRes = await fetch(`${base}/functions/v1/auto-release-return`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-cron-secret": "Auto_Release_Escrow_2026",
+      },
+    })
+
+    console.log("Return auto refund status:", returnRes.status)
+    console.log("Return auto refund response:", await returnRes.text())
+
+    console.log("⏱️ Triggering non-return escrow release")
+
+    const nonReturnRes = await fetch(
+      `${base}/functions/v1/auto-non-return-release`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-cron-secret": "Auto_Release_Escrow_2026",
+        },
       }
-    })()
+    )
+
+    console.log("Non-return release status:", nonReturnRes.status)
+    console.log("Non-return release response:", await nonReturnRes.text())
+  } catch (err) {
+    console.log("⚠ Escrow trigger error:", err)
+  }
+})()
 
     // 🔥 CRITICAL: Reload Pro status (this updates boostsRemaining)
     loadProStatus()

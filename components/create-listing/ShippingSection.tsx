@@ -48,10 +48,17 @@ export default function ShippingSection({
 
           <View
             style={[
-              styles.radio,
-              isSellerPays && styles.radioActive,
+              styles.toggle,
+              isSellerPays && styles.toggleActive,
             ]}
-          />
+          >
+            <View
+              style={[
+                styles.toggleKnob,
+                isSellerPays && styles.toggleKnobActive,
+              ]}
+            />
+          </View>
         </TouchableOpacity>
 
         {/* BUYER PAYS OPTION */}
@@ -72,13 +79,20 @@ export default function ShippingSection({
 
           <View
             style={[
-              styles.radio,
-              isBuyerPays && styles.radioActive,
+              styles.toggle,
+              isBuyerPays && styles.toggleActive,
             ]}
-          />
+          >
+            <View
+              style={[
+                styles.toggleKnob,
+                isBuyerPays && styles.toggleKnobActive,
+              ]}
+            />
+          </View>
         </TouchableOpacity>
 
-        {/* SHIPPING PRICE INPUT (ONLY IF BUYER PAYS) */}
+        {/* SHIPPING PRICE INPUT */}
         {isBuyerPays && (
           <View style={styles.priceWrap}>
             <Text style={styles.priceLabel}>Shipping Price *</Text>
@@ -99,7 +113,6 @@ export default function ShippingSection({
 }
 
 const styles = StyleSheet.create({
-  /* FULL BLEED SECTION (NO EDGES - matches your builder) */
   section: {
     marginHorizontal: -16,
     backgroundColor: "#FFFFFF",
@@ -120,7 +133,7 @@ const styles = StyleSheet.create({
 
   subText: {
     fontSize: 12,
-    color: "#323232", // your preferred subtext color
+    color: "#323232",
     paddingHorizontal: 16,
     marginBottom: 14,
   },
@@ -143,7 +156,7 @@ const styles = StyleSheet.create({
   },
 
   optionRowActive: {
-    backgroundColor: "#F4FAF7", // subtle Melo highlight
+    backgroundColor: "#F4FAF7",
   },
 
   optionTextWrap: {
@@ -163,18 +176,29 @@ const styles = StyleSheet.create({
     color: "#6B6B6B",
   },
 
-  /* Radio Circle (premium marketplace feel) */
-  radio: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: "#DADADA",
+  /* Toggle Switch */
+  toggle: {
+    width: 44,
+    height: 24,
+    borderRadius: 14,
+    backgroundColor: "#DADADA",
+    justifyContent: "center",
+    paddingHorizontal: 3,
   },
 
-  radioActive: {
-    borderColor: "#7FAF9B",
+  toggleActive: {
     backgroundColor: "#7FAF9B",
+  },
+
+  toggleKnob: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#FFFFFF",
+  },
+
+  toggleKnobActive: {
+    alignSelf: "flex-end",
   },
 
   priceWrap: {

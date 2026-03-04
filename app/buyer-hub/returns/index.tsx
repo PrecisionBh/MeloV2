@@ -1,16 +1,16 @@
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { useEffect, useState } from "react"
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native"
 
 import AppHeader from "@/components/app-header"
@@ -18,11 +18,11 @@ import { useAuth } from "@/context/AuthContext"
 import { notify } from "@/lib/notifications/notify"
 import { supabase } from "@/lib/supabase"
 
-
 /* ---------------- TYPES ---------------- */
 
 type Order = {
   id: string
+  public_order_number?: string | null
   buyer_id: string
   seller_id: string
   status: string
@@ -75,6 +75,7 @@ export default function ReturnInitiateScreen() {
         .from("orders")
         .select(`
           id,
+          public_order_number,
           buyer_id,
           seller_id,
           status,
@@ -93,7 +94,6 @@ export default function ReturnInitiateScreen() {
 
       const safeOrder = data as Order
 
-      // Security: Ensure buyer owns the order
       if (safeOrder.buyer_id !== user?.id) {
         Alert.alert(
           "Access Denied",
@@ -103,13 +103,12 @@ export default function ReturnInitiateScreen() {
         return
       }
 
-      // 🚫 Block invalid lifecycle states (final, return, dispute, cancelled)
       if (
         [
           "return_started",
           "return_processing",
           "disputed",
-          "completed", // 🔒 FINAL state - protects seller
+          "completed",
           "cancelled",
         ].includes(safeOrder.status)
       ) {
@@ -123,7 +122,6 @@ export default function ReturnInitiateScreen() {
         return
       }
 
-      // ✅ Only allow returns after shipment and before completion
       if (safeOrder.status !== "shipped") {
         Alert.alert(
           "Return Not Available",
@@ -162,25 +160,24 @@ export default function ReturnInitiateScreen() {
         return
       }
 
-      // 🔒 IMPORTANT: DB trigger will freeze escrow (NOT the app)
       const { error: updateError } = await supabase
         .from("orders")
         .update({
           status: "return_started",
+          escrow_status: "held",
           return_reason: reason,
           return_notes: notes.trim() || null,
           return_requested_at: new Date().toISOString(),
           return_deadline: new Date(
             Date.now() + 72 * 60 * 60 * 1000
-          ).toISOString(), // ⏰ 72 hour buyer timer
+          ).toISOString(),
         })
         .eq("id", order.id)
         .eq("buyer_id", user.id)
-        .eq("status", "shipped") // 🛡️ prevents race conditions & stale UI updates
+        .eq("status", "shipped")
 
       if (updateError) throw updateError
 
-      // 🔔 Notify seller (use unified Melo notification system)
       try {
         await notify({
           userId: order.seller_id,
@@ -204,7 +201,7 @@ export default function ReturnInitiateScreen() {
 
       Alert.alert(
         "Return Started",
-        "Your return has been initiated. Escrow funds are now frozen pending return review.",
+        "Your return has been initiated. Escrow funds are now held pending return review.",
         [
           {
             text: "OK",
@@ -224,8 +221,6 @@ export default function ReturnInitiateScreen() {
       setSubmitting(false)
     }
   }
-
-  /* ---------------- LOADING STATE ---------------- */
 
   if (loading) {
     return (
@@ -256,8 +251,6 @@ export default function ReturnInitiateScreen() {
 
   const listingTitle =
     order.listing_snapshot?.title || "Listing"
-
-  /* ---------------- UI ---------------- */
 
   return (
     <View style={{ flex: 1, backgroundColor: "#EAF4EF" }}>

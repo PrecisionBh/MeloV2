@@ -17,6 +17,8 @@ export type Listing = {
   status: "active" | "inactive"
   is_boosted?: boolean
   boost_expires_at?: string | null
+  is_mega_boost?: boolean
+  mega_boost_expires_at?: string | null
 }
 
 type Props = {
@@ -29,6 +31,7 @@ type Props = {
   onDeactivate: () => void
   onDuplicate: () => void
   onBoost: () => void
+  onMegaBoost: () => void
 }
 
 export default function ListingCard({
@@ -41,27 +44,56 @@ export default function ListingCard({
   onDeactivate,
   onDuplicate,
   onBoost,
+  onMegaBoost,
 }: Props) {
+
   const thumbnail = item.image_urls?.[0] ?? null
   const isActive = item.status === "active"
 
-  const boostDisabled = !isPro || boostRemaining <= 0 || !isActive
+  // only disable if listing inactive
+  const boostDisabled = !isActive
+  const megaDisabled = !isActive
 
   const boostBadge = useMemo(() => {
+
+    const now = Date.now()
+
+    // 🚀 MEGA BOOST BADGE
+    if (item.is_mega_boost && item.mega_boost_expires_at) {
+      try {
+        const expires = new Date(item.mega_boost_expires_at).getTime()
+        const diff = expires - now
+
+        if (diff <= 0) return "MEGA BOOST EXPIRED"
+
+        const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
+        return `MEGA BOOST · ${days}d`
+      } catch {
+        return "🚀 MEGA BOOST"
+      }
+    }
+
+    // ⚡ NORMAL BOOST BADGE
     if (!item.is_boosted || !item.boost_expires_at) return null
 
     try {
       const expires = new Date(item.boost_expires_at).getTime()
-      const now = Date.now()
       const diff = expires - now
+
       if (diff <= 0) return "BOOST EXPIRED"
 
       const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
-      return `BOOSTED · ${days}d left`
+      return `BOOSTED · ${days}d`
     } catch {
       return "BOOSTED"
     }
-  }, [item.is_boosted, item.boost_expires_at])
+
+  }, [
+    item.is_boosted,
+    item.boost_expires_at,
+    item.is_mega_boost,
+    item.mega_boost_expires_at,
+  ])
 
   const confirmDelete = () => {
     Alert.alert(
@@ -91,13 +123,21 @@ export default function ListingCard({
   }
 
   const confirmBoost = () => {
-    if (item.is_boosted && item.boost_expires_at) {
-      const expires = new Date(item.boost_expires_at)
-      const formatted = expires.toLocaleDateString()
 
+    const now = Date.now()
+
+    const boostActive =
+      item.boost_expires_at &&
+      new Date(item.boost_expires_at).getTime() > now
+
+    const megaActive =
+      item.mega_boost_expires_at &&
+      new Date(item.mega_boost_expires_at).getTime() > now
+
+    if (boostActive || megaActive) {
       Alert.alert(
         "Already Boosted",
-        `This listing is boosted until ${formatted}.`,
+        "This listing already has an active boost. You can boost again once it expires.",
         [{ text: "OK" }]
       )
       return
@@ -131,13 +171,52 @@ export default function ListingCard({
     )
   }
 
+  const confirmMegaBoost = () => {
+
+    const now = Date.now()
+
+    const boostActive =
+      item.boost_expires_at &&
+      new Date(item.boost_expires_at).getTime() > now
+
+    const megaActive =
+      item.mega_boost_expires_at &&
+      new Date(item.mega_boost_expires_at).getTime() > now
+
+    if (boostActive || megaActive) {
+      Alert.alert(
+        "Already Boosted",
+        "This listing already has an active boost.",
+        [{ text: "OK" }]
+      )
+      return
+    }
+
+    if (!isPro) {
+      Alert.alert(
+        "Pro Required",
+        "Mega Boost is available for Melo Pro members only.",
+        [{ text: "OK" }]
+      )
+      return
+    }
+
+    Alert.alert(
+      "Mega Boost Listing",
+      "Mega Boost will dominate the marketplace for maximum exposure.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Mega Boost", onPress: onMegaBoost },
+      ]
+    )
+  }
+
   return (
     <TouchableOpacity
       style={[styles.card, !isActive && styles.cardInactive]}
       onPress={onPress}
       activeOpacity={0.95}
     >
-      {/* Top Section */}
       <View style={styles.topRow}>
         <View style={styles.thumbWrap}>
           {thumbnail ? (
@@ -187,21 +266,31 @@ export default function ListingCard({
         </View>
       </View>
 
-      {/* Bottom Buttons */}
       <View style={styles.buttonRow}>
         <BottomBtn icon="create-outline" label="Edit" onPress={onEdit} />
+
         <BottomBtn
           icon={isActive ? "pause-outline" : "refresh-outline"}
           label={isActive ? "Pause" : "Relist"}
           onPress={confirmDeactivate}
         />
+
         <BottomBtn
           icon="flash-outline"
-          label={item.is_boosted ? "Boosted" : "Boost"}
+          label="Boost"
           onPress={confirmBoost}
           variant="gold"
           disabled={boostDisabled}
         />
+
+        <BottomBtn
+          icon="rocket-outline"
+          label="Mega"
+          onPress={confirmMegaBoost}
+          variant="gold"
+          disabled={megaDisabled}
+        />
+
         <BottomBtn
           icon="trash-outline"
           label="Delete"

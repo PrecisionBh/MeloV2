@@ -190,27 +190,27 @@ export default function CreateListingScreen() {
       if (error) throw error
 
       // 🔥 MUTUAL EXCLUSION: only ONE boost type allowed
-      if (isPro && data?.id) {
-        if (isMegaBoosted) {
-          const { error: megaError } = await supabase.rpc("mega_boost_listing", {
-            listing_id: data.id,
-            user_id: session.user.id,
-          })
+if (isPro && data?.id) {
+  if (isMegaBoosted) {
+    const { error: megaError } = await supabase.rpc("mega_boost_listing", {
+      listing_id: data.id,
+      user_id: session.user.id,
+    })
 
-          if (megaError) {
-            console.warn("Mega Boost failed:", megaError.message)
-          }
-        } else if (isBoosted) {
-          const { error: boostError } = await supabase.rpc("boost_listing", {
-            listing_id: data.id,
-            user_id: session.user.id,
-          })
+    if (megaError) {
+      console.warn("Mega Boost failed:", megaError.message)
+    }
+  } else if (isBoosted) {
+    const { error: boostError } = await supabase.rpc("boost_listing", {
+      listing_id: data.id,
+      user_id: session.user.id,
+    })
 
-          if (boostError) {
-            console.warn("Boost failed:", boostError.message)
-          }
-        }
-      }
+    if (boostError) {
+      console.warn("Boost failed:", boostError.message)
+    }
+  }
+}
 
       Alert.alert("Success", "Your listing has been created!")
       router.replace("/seller-hub")

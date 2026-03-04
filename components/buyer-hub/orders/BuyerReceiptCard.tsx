@@ -19,13 +19,17 @@ export default function BuyerReceiptCard({
   totalPaid,
   status,
 }: Props) {
+
   const isRefunded = status === "returned"
 
   const itemTotal = itemPrice * quantity
 
+  // Refund excludes buyer protection
+  const refundAmount = Math.max(0, totalPaid - buyerFee)
+
   return (
     <View style={styles.card}>
-      {/* 🟢 REFUNDED TITLE (ONLY IF RETURNED) */}
+
       {isRefunded && (
         <View style={styles.refundedHeader}>
           <Text style={styles.refundedTitle}>Refunded</Text>
@@ -37,7 +41,6 @@ export default function BuyerReceiptCard({
 
       <View style={styles.receipt}>
 
-        {/* 🔥 ITEM PRICE BREAKDOWN */}
         {quantity > 1 ? (
           <ReceiptRow
             label="Item price"
@@ -63,11 +66,17 @@ export default function BuyerReceiptCard({
           subtle
         />
 
+        {/* Buyer Protection */}
         <ReceiptRow
           label="Buyer protection & processing"
           value={`$${buyerFee.toFixed(2)}`}
           subtle
         />
+
+        {/* 🔥 NEW NOTE */}
+        <Text style={styles.feeNote}>
+          Non-refundable
+        </Text>
 
         <View style={styles.receiptDivider} />
 
@@ -77,17 +86,17 @@ export default function BuyerReceiptCard({
           bold
         />
 
-        {/* 💸 REFUND LINE */}
         {isRefunded && (
           <>
             <View style={styles.receiptDivider} />
             <ReceiptRow
               label="Refund issued"
-              value={`-$${totalPaid.toFixed(2)}`}
+              value={`-$${refundAmount.toFixed(2)}`}
               refunded
             />
           </>
         )}
+
       </View>
     </View>
   )
@@ -219,5 +228,13 @@ const styles = StyleSheet.create({
     color: "#1F7A63",
     fontWeight: "900",
     fontSize: 15,
+  },
+
+  feeNote: {
+    fontSize: 11,
+    color: "#8FA39A",
+    marginTop: -4,
+    marginBottom: 6,
+    fontWeight: "500",
   },
 })

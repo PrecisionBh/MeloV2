@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router"
-import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -8,13 +8,15 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native"
+} from "react-native";
 
-import AppHeader from "@/components/app-header"
-import ListingCard from "@/components/listing/ListingCard"
-import { useAuth } from "../../context/AuthContext"
-import { handleAppError } from "../../lib/errors/appError"
-import { supabase } from "../../lib/supabase"
+import AppHeader from "@/components/app-header";
+import CreateListingFooter from "@/components/create-listing/CreateListingFooter";
+import ListingCard from "@/components/listing/ListingCard";
+
+import { useAuth } from "../../context/AuthContext";
+import { handleAppError } from "../../lib/errors/appError";
+import { supabase } from "../../lib/supabase";
 
 type Listing = {
   id: string
@@ -22,8 +24,12 @@ type Listing = {
   price: number
   image_urls: string[] | null
   status: "active" | "inactive"
+
   is_boosted?: boolean
   boost_expires_at?: string | null
+
+  is_mega_boost?: boolean
+  mega_boost_expires_at?: string | null
 }
 
 type FilterType = "active" | "inactive"
@@ -37,6 +43,9 @@ export default function MyListingsScreen() {
   const [isPro, setIsPro] = useState(false)
   const [boostRemaining, setBoostRemaining] = useState(0)
   const [filter, setFilter] = useState<FilterType>("active")
+
+  // footer state (kept for UI consistency)
+  const [footerSubmitting, setFooterSubmitting] = useState(false)
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -84,7 +93,7 @@ export default function MyListingsScreen() {
 
       const { data, error } = await supabase
         .from("listings")
-        .select("id,title,price,image_urls,status,is_boosted,boost_expires_at")
+        .select("id,title,price,image_urls,status,is_boosted,boost_expires_at,is_mega_boost,mega_boost_expires_at")
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false })
 
@@ -115,50 +124,118 @@ export default function MyListingsScreen() {
   const totalCount = listings.length
 
   const boostListing = async (listingId: string) => {
-    if (!session?.user?.id) {
-      Alert.alert("Error", "User session not found.")
-      return
-    }
-
-    if (!isPro) {
-      Alert.alert(
-        "Melo Pro Required",
-        "Upgrade to Melo Pro to boost your listings."
-      )
-      return
-    }
-
-    if (boostRemaining <= 0) {
-      Alert.alert(
-        "No Boosts Remaining",
-        "You’ve used all your boosts for this cycle."
-      )
-      return
-    }
-
-    try {
-      const { error } = await supabase.rpc("boost_listing", {
-        listing_id: listingId,
-        user_id: session.user.id,
-      })
-
-      if (error) throw error
-
-      await Promise.all([loadListings(), loadProStatus()])
-
-      Alert.alert("Boosted 🚀", "Your listing is now boosted!")
-    } catch (err) {
-      handleAppError(err, {
-        context: "boost_listing",
-        fallbackMessage: "Failed to boost listing.",
-      })
-    }
+  if (!session?.user?.id) {
+    Alert.alert("Error", "User session not found.")
+    return
   }
+
+  const listing = listings.find((l) => l.id === listingId)
+
+  const now = new Date()
+
+  const boostActive =
+    listing?.boost_expires_at &&
+    new Date(listing.boost_expires_at) > now
+
+  const megaActive =
+    listing?.mega_boost_expires_at &&
+    new Date(listing.mega_boost_expires_at) > now
+
+  // 🚫 BLOCK if ANY boost is active
+  if (boostActive || megaActive) {
+    Alert.alert(
+      "Listing Already Boosted",
+      "This listing already has an active boost. You can boost again once it expires."
+    )
+    return
+  }
+
+  if (!isPro) {
+    Alert.alert(
+      "Melo Pro Required",
+      "Upgrade to Melo Pro to boost your listings."
+    )
+    return
+  }
+
+  if (boostRemaining <= 0) {
+    Alert.alert(
+      "No Boosts Remaining",
+      "You’ve used all your boosts for this cycle."
+    )
+    return
+  }
+
+  try {
+    const { error } = await supabase.rpc("boost_listing", {
+      listing_id: listingId,
+      user_id: session.user.id,
+    })
+
+    if (error) throw error
+
+    await Promise.all([loadListings(), loadProStatus()])
+
+    Alert.alert("Boosted 🚀", "Your listing is now boosted!")
+  } catch (err) {
+    handleAppError(err, {
+      context: "boost_listing",
+      fallbackMessage: "Failed to boost listing.",
+    })
+  }
+}
+
+const megaBoostListing = async (listingId: string) => {
+  if (!session?.user?.id) {
+    Alert.alert("Error", "User session not found.")
+    return
+  }
+
+  const listing = listings.find((l) => l.id === listingId)
+
+  const now = new Date()
+
+  const boostActive =
+    listing?.boost_expires_at &&
+    new Date(listing.boost_expires_at) > now
+
+  const megaActive =
+    listing?.mega_boost_expires_at &&
+    new Date(listing.mega_boost_expires_at) > now
+
+  if (boostActive || megaActive) {
+    Alert.alert(
+      "Listing Already Boosted",
+      "This listing already has an active boost."
+    )
+    return
+  }
+
+  try {
+    const { error } = await supabase.rpc("mega_boost_listing", {
+  listing_id: listingId,
+  user_id: session.user.id,
+})
+
+    if (error) throw error
+
+    await loadListings()
+
+    Alert.alert("Mega Boosted 🚀", "Your listing is now mega boosted!")
+  } catch (err) {
+    handleAppError(err, {
+      context: "mega_boost_listing",
+      fallbackMessage: "Failed to mega boost listing.",
+    })
+  }
+}
 
   const deactivateListing = async (id: string) => {
     try {
       // 🚀 OPTIMISTIC UI UPDATE (instant removal from Active tab)
-      setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: "inactive" } : l)))
+      setListings((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, status: "inactive" } : l))
+      )
 
       const { error } = await supabase
         .from("listings")
@@ -171,7 +248,6 @@ export default function MyListingsScreen() {
         context: "my_listings_deactivate",
         fallbackMessage: "Failed to deactivate listing.",
       })
-      // fallback safety reload
       loadListings()
     }
   }
@@ -216,7 +292,6 @@ export default function MyListingsScreen() {
 
       if (insertError) throw insertError
 
-      // 🚀 instantly add new active listing (no refresh lag)
       if (newListing) {
         setListings((prev) => [newListing as Listing, ...prev])
       }
@@ -244,10 +319,7 @@ export default function MyListingsScreen() {
               // 🚀 OPTIMISTIC REMOVE (instant UI update)
               setListings((prev) => prev.filter((l) => l.id !== id))
 
-              const { error } = await supabase
-                .from("listings")
-                .delete()
-                .eq("id", id)
+              const { error } = await supabase.from("listings").delete().eq("id", id)
 
               if (error) throw error
             } catch (err) {
@@ -255,13 +327,25 @@ export default function MyListingsScreen() {
                 context: "my_listings_delete",
                 fallbackMessage: "Failed to delete listing.",
               })
-              // fallback reload if something fails
               loadListings()
             }
           },
         },
       ]
     )
+  }
+
+  const goCreateListing = async () => {
+    if (footerSubmitting) return
+    try {
+      setFooterSubmitting(true)
+
+      // ✅ Change this route if your create listing path differs
+      router.push("/seller-hub/create-listing")
+    } finally {
+      // keep it snappy; navigation will usually happen instantly
+      setTimeout(() => setFooterSubmitting(false), 350)
+    }
   }
 
   if (loading) {
@@ -280,7 +364,9 @@ export default function MyListingsScreen() {
       <View style={styles.workspaceCard}>
         <View style={styles.workspaceTopRow}>
           <Text style={styles.workspaceTitle}>Inventory</Text>
-          <Text style={styles.workspaceSub}>Manage, edit, pause, and relist your items.</Text>
+          <Text style={styles.workspaceSub}>
+            Manage, edit, pause, and relist your items.
+          </Text>
         </View>
 
         <View style={styles.metricsRow}>
@@ -317,45 +403,59 @@ export default function MyListingsScreen() {
         </TouchableOpacity>
       </View>
 
-      {filteredListings.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>Nothing here yet</Text>
-          <Text style={styles.emptyText}>
-            {filter === "active"
-              ? "Your active listings will appear here."
-              : "Listings you pause will appear here."}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredListings}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          initialNumToRender={8}
-          windowSize={5}
-          removeClippedSubviews
-          renderItem={({ item }) => (
-            <View style={styles.cardWrap}>
-              <ListingCard
-                item={item}
-                isPro={isPro}
-                boostRemaining={boostRemaining}
-                onPress={() => router.push(`/listing/${item.id}`)}
-                onEdit={() =>
-                  router.push({
-                    pathname: "/edit-listing/[id]" as any,
-                    params: { id: item.id },
-                  } as any)
-                }
-                onDelete={() => deleteListing(item.id)}
-                onDeactivate={() => deactivateListing(item.id)}
-                onDuplicate={() => duplicateListing(item.id)}
-                onBoost={() => boostListing(item.id)}
-              />
-            </View>
-          )}
+      {/* Content */}
+      <View style={styles.body}>
+        {filteredListings.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>Nothing here yet</Text>
+            <Text style={styles.emptyText}>
+              {filter === "active"
+                ? "Your active listings will appear here."
+                : "Listings you pause will appear here."}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredListings}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            initialNumToRender={8}
+            windowSize={5}
+            removeClippedSubviews
+            renderItem={({ item }) => (
+             <View style={styles.cardWrap}>
+  <ListingCard
+    item={item}
+    isPro={isPro}
+    boostRemaining={boostRemaining}
+    onPress={() => router.push(`/listing/${item.id}`)}
+    onEdit={() =>
+      router.push({
+        pathname: "/edit-listing/[id]" as any,
+        params: { id: item.id },
+      } as any)
+    }
+    onDelete={() => deleteListing(item.id)}
+    onDeactivate={() => deactivateListing(item.id)}
+    onDuplicate={() => duplicateListing(item.id)}
+    onBoost={() => boostListing(item.id)}
+    onMegaBoost={() => megaBoostListing(item.id)}
+  />
+</View>
+)}
+/>
+)}
+</View>
+
+      {/* ✅ STICKY CREATE LISTING FOOTER */}
+      <View style={styles.stickyFooter}>
+        <CreateListingFooter
+          onSubmit={goCreateListing}
+          submitting={footerSubmitting}
+          disabled={false}
+          label="Create Listing"
         />
-      )}
+      </View>
     </View>
   )
 }
@@ -371,6 +471,8 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#F7F9F8" },
+
+  body: { flex: 1 },
 
   loaderWrap: {
     flex: 1,
@@ -488,7 +590,7 @@ const styles = StyleSheet.create({
   /* List */
   listContent: {
     padding: 16,
-    paddingBottom: 160,
+    paddingBottom: 220, // ✅ extra space so last card isn't hidden behind sticky footer
   },
   cardWrap: {
     marginBottom: 12,
@@ -513,5 +615,13 @@ const styles = StyleSheet.create({
     color: "#557566",
     textAlign: "center",
     lineHeight: 18,
+  },
+
+  /* Sticky Footer */
+  stickyFooter: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
 })

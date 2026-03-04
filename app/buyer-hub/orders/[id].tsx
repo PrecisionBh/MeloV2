@@ -363,13 +363,25 @@ export default function BuyerOrderDetailScreen() {
     ? order.return_tracking_url
     : order.tracking_url
 
-  const quantity = order.quantity ?? 1
+    const quantity = order.quantity ?? 1
+
+// item price stored as total for quantity
 const itemTotal = (order.item_price_cents ?? 0) / 100
+
+// calculate unit price for receipt display
 const itemUnitPrice = quantity > 0 ? itemTotal / quantity : itemTotal
-  const shipping = (order.shipping_amount_cents ?? 0) / 100
-  const tax = (order.tax_cents ?? 0) / 100
-  const buyerFee = (order.buyer_fee_cents ?? 0) / 100
-  const totalPaid = (order.amount_cents ?? 0) / 100
+
+const shipping = (order.shipping_amount_cents ?? 0) / 100
+const tax = (order.tax_cents ?? 0) / 100
+
+// buyer protection + processing fee
+const buyerFee = (order.buyer_fee_cents ?? 0) / 100
+
+// ✅ actual total the buyer paid
+const totalPaid = (order.amount_cents ?? 0) / 100
+
+// ✅ refund excludes buyer protection fee
+const refundAmount = Math.max(0, totalPaid - buyerFee)
 
   return (
     <View style={styles.screen}>
@@ -393,16 +405,16 @@ const itemUnitPrice = quantity > 0 ? itemTotal / quantity : itemTotal
 
         <View style={styles.content}>
           {!isInReturnFlow && (
-            <BuyerReceiptCard
+  <BuyerReceiptCard
   itemPrice={itemUnitPrice}
   quantity={quantity}
   shipping={shipping}
   tax={tax}
   buyerFee={buyerFee}
-  totalPaid={totalPaid}
+  totalPaid={totalPaid} // ✅ pass the real total paid
   status={order.status}
 />
-          )}
+)}
 
           {/* 🔥 ONLY ADDITION: DISPUTE LOCK + SEE DISPUTE BUTTON */}
           <OrderActionButtons

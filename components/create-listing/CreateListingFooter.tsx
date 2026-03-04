@@ -71,8 +71,8 @@ const styles = StyleSheet.create({
 
   submitButton: {
     height: 54,
-    borderRadius: 14,
-    backgroundColor: "#0F1E17", // Melo primary dark
+    borderRadius: 80,
+    backgroundColor: "#7FAF9B", // Melo primary dark
     alignItems: "center",
     justifyContent: "center",
   },
