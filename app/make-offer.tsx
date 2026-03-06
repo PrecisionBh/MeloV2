@@ -56,7 +56,7 @@ export default function MakeOfferScreen() {
   user_id,
   shipping_type,
   shipping_price,
-  quantity_available
+  quantity
 `)
           .eq("id", listingId)
           .single()
@@ -148,13 +148,10 @@ const submitOffer = async () => {
     return
   }
 
-  if (listing.quantity_available && quantity > listing.quantity_available) {
-    Alert.alert(
-      "Not enough stock",
-      `Only ${listing.quantity_available} available.`
-    )
-    return
-  }
+  if (typeof listing.quantity === "number" && quantity > listing.quantity) {
+  Alert.alert("Not enough stock", `Only ${listing.quantity} available.`)
+  return
+}
 
   if (!numericOffer || numericOffer <= 0) {
     Alert.alert("Invalid offer", "Enter a valid offer amount.")
@@ -285,190 +282,197 @@ return (
         </View>
 
         <View style={styles.card}>
-  <Text style={styles.sectionTitle}>Your Offer</Text>
+          <Text style={styles.sectionTitle}>Your Offer</Text>
 
-  {/* 🔥 ONLY show stock + quantity selector if more than 1 available */}
-  {typeof listing?.quantity_available === "number" &&
-    listing.quantity_available > 1 && (
-      <>
-        <Text
-          style={{
-            fontSize: 12,
-            fontWeight: "800",
-            color: "#2E5F4F",
-            marginBottom: 8,
-          }}
-        >
-          {listing.quantity_available} available
-        </Text>
+          {/* 🔥 ONLY show stock + quantity selector if more than 1 available */}
+          {typeof listing?.quantity === "number" && listing.quantity > 1 && (
+            <>
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: "800",
+                  color: "#2E5F4F",
+                  marginBottom: 8,
+                }}
+              >
+                {listing.quantity} available
+              </Text>
 
-        <View style={{ marginBottom: 12 }}>
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: "800",
-              color: "#0F1E17",
-              marginBottom: 6,
-            }}
+              <View style={{ marginBottom: 12 }}>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: "800",
+                    color: "#0F1E17",
+                    marginBottom: 6,
+                  }}
+                >
+                  Quantity
+                </Text>
+
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <TouchableOpacity
+                    onPress={() => setQuantity((q) => Math.max(1, q - 1))}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 10,
+                      backgroundColor: "#E8F5EE",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 20,
+                        fontWeight: "900",
+                        color: "#0F1E17",
+                      }}
+                    >
+                      -
+                    </Text>
+                  </TouchableOpacity>
+
+                  <Text
+                    style={{
+                      marginHorizontal: 18,
+                      fontSize: 18,
+                      fontWeight: "900",
+                      color: "#0F1E17",
+                      minWidth: 30,
+                      textAlign: "center",
+                    }}
+                  >
+                    {quantity}
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      setQuantity((q) =>
+                        Math.min(listing.quantity ?? 1, q + 1)
+                      )
+                    }
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 10,
+                      backgroundColor: "#E8F5EE",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 20,
+                        fontWeight: "900",
+                        color: "#0F1E17",
+                      }}
+                    >
+                      +
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </>
+          )}
+
+          {minError && <Text style={styles.minError}>{minError}</Text>}
+
+          <TextInput
+            placeholder="Enter your offer (per item)"
+            keyboardType="decimal-pad"
+            value={offer}
+            onChangeText={setOffer}
+            style={styles.input}
+          />
+
+          {numericOffer > 0 && (
+            <View style={styles.summary}>
+              <Row
+                label={
+                  typeof listing?.quantity === "number" &&
+                  listing.quantity > 1
+                    ? `Offer (${quantity} × $${numericOffer.toFixed(2)})`
+                    : `Offer amount`
+                }
+                value={
+                  typeof listing?.quantity === "number" &&
+                  listing.quantity > 1
+                    ? `$${(numericOffer * quantity).toFixed(2)}`
+                    : `$${numericOffer.toFixed(2)}`
+                }
+              />
+
+              {shippingCost > 0 && (
+                <Row
+                  label={
+                    typeof listing?.quantity === "number" &&
+                    listing.quantity > 1
+                      ? `Shipping (${quantity} items)`
+                      : "Shipping"
+                  }
+                  value={`$${shippingCost.toFixed(2)}`}
+                />
+              )}
+
+              <Row
+                label="Buyer protection & processing"
+                value={`$${buyerFee.toFixed(2)}`}
+              />
+
+              <Row
+                label="Estimated sales tax (7.5%)"
+                value={`$${salesTax.toFixed(2)}`}
+              />
+
+              <View style={styles.divider} />
+
+              <Row
+                label="Total if accepted"
+                value={`$${totalDue.toFixed(2)}`}
+                bold
+              />
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[styles.primaryBtn, loading && { opacity: 0.7 }]}
+            onPress={submitOffer}
+            disabled={loading || listing?.quantity === 0}
           >
-            Quantity
+            <Text style={styles.primaryText}>
+              {loading
+                ? "Sending..."
+                : listing?.quantity === 0
+                ? "Out of Stock"
+                : "Submit Offer"}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.reassurance}>
+            Submitting an offer does not guarantee acceptance.
           </Text>
 
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <TouchableOpacity
-              onPress={() => setQuantity((q) => Math.max(1, q - 1))}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                backgroundColor: "#E8F5EE",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={{ fontSize: 20, fontWeight: "900", color: "#0F1E17" }}
-              >
-                -
-              </Text>
-            </TouchableOpacity>
+          <Text style={styles.reassurance}>Offers expire after 24 hours.</Text>
 
-            <Text
-              style={{
-                marginHorizontal: 18,
-                fontSize: 18,
-                fontWeight: "900",
-                color: "#0F1E17",
-                minWidth: 30,
-                textAlign: "center",
-              }}
-            >
-              {quantity}
-            </Text>
-
-            <TouchableOpacity
-              onPress={() =>
-                setQuantity((q) =>
-                  Math.min(listing.quantity_available ?? 1, q + 1)
-                )
-              }
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                backgroundColor: "#E8F5EE",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={{ fontSize: 20, fontWeight: "900", color: "#0F1E17" }}
-              >
-                +
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.protectionPill}>
+            <Ionicons name="shield-checkmark" size={14} color="#1F7A63" />
+            <Text style={styles.protectionText}>Buyer Protection Included</Text>
           </View>
         </View>
-      </>
-    )}
 
-  {minError && <Text style={styles.minError}>{minError}</Text>}
-
-  <TextInput
-    placeholder="Enter your offer (per item)"
-    keyboardType="decimal-pad"
-    value={offer}
-    onChangeText={setOffer}
-    style={styles.input}
-  />
-
-  {numericOffer > 0 && (
-    <View style={styles.summary}>
-      <Row
-        label={
-          typeof listing?.quantity_available === "number" &&
-          listing.quantity_available > 1
-            ? `Offer (${quantity} × $${numericOffer.toFixed(2)})`
-            : `Offer amount`
-        }
-        value={
-          typeof listing?.quantity_available === "number" &&
-          listing.quantity_available > 1
-            ? `$${(numericOffer * quantity).toFixed(2)}`
-            : `$${numericOffer.toFixed(2)}`
-        }
-      />
-
-      {shippingCost > 0 && (
-        <Row
-          label={
-            typeof listing?.quantity_available === "number" &&
-            listing.quantity_available > 1
-              ? `Shipping (${quantity} items)`
-              : "Shipping"
-          }
-          value={`$${shippingCost.toFixed(2)}`}
-        />
-      )}
-
-      <Row
-        label="Buyer protection & processing"
-        value={`$${buyerFee.toFixed(2)}`}
-      />
-
-      <Row
-        label="Estimated sales tax (7.5%)"
-        value={`$${salesTax.toFixed(2)}`}
-      />
-
-      <View style={styles.divider} />
-
-      <Row
-        label="Total if accepted"
-        value={`$${totalDue.toFixed(2)}`}
-        bold
-      />
-    </View>
-  )}
-
-  <TouchableOpacity
-    style={[styles.primaryBtn, loading && { opacity: 0.7 }]}
-    onPress={submitOffer}
-    disabled={loading || listing?.quantity_available === 0}
-  >
-    <Text style={styles.primaryText}>
-      {loading
-        ? "Sending..."
-        : listing?.quantity_available === 0
-        ? "Out of Stock"
-        : "Submit Offer"}
-    </Text>
-  </TouchableOpacity>
-
-  <Text style={styles.reassurance}>
-    Submitting an offer does not guarantee acceptance.
-  </Text>
-
-  <Text style={styles.reassurance}>Offers expire after 24 hours.</Text>
-
-  <View style={styles.protectionPill}>
-    <Ionicons name="shield-checkmark" size={14} color="#1F7A63" />
-    <Text style={styles.protectionText}>Buyer Protection Included</Text>
+        <View style={{ height: 120 }} />
+      </ScrollView>
+    </KeyboardAvoidingView>
   </View>
-</View>
-
-<View style={{ height: 120 }} />
-</ScrollView>
-</KeyboardAvoidingView>
-</View>
 )
 }
 

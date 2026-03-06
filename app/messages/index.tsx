@@ -130,7 +130,17 @@ export default function MessagesScreen() {
         data={conversations}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{
+          paddingBottom: 20,
+          flexGrow: 1,
+        }}
+        ListEmptyComponent={
+          !loading ? (
+            <View style={styles.emptyWrap}>
+              <Text style={styles.emptyText}>No new messages at this time</Text>
+            </View>
+          ) : null
+        }
       />
     </View>
   )
@@ -211,5 +221,17 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 11,
     fontWeight: "800",
+  },
+
+  emptyWrap: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  emptyText: {
+    fontSize: 15,
+    color: "#6B8F7D",
+    fontWeight: "600",
   },
 })

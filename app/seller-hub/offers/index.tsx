@@ -211,7 +211,7 @@ export default function SellerOffersScreen() {
       <AppHeader
         title="Offers"
         backLabel="Orders"
-        backRoute="/seller-hub/orders"
+        backRoute="/seller-hub"
       />
 
       {/* FILTER PILLS (UNCHANGED) */}

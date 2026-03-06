@@ -31,7 +31,7 @@ export default function ForgotPasswordScreen() {
       const { error } = await supabase.auth.resetPasswordForEmail(
         normalizedEmail,
         {
-          redirectTo: "melomp://reset-password",
+          redirectTo: "https://melomarketplace.app/reset-password",
         }
       )
 

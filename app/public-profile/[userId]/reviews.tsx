@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons"
-import { useLocalSearchParams, useRouter } from "expo-router"
-import { useEffect, useMemo, useState } from "react"
+import { useLocalSearchParams } from "expo-router"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIndicator,
   FlatList,
@@ -11,9 +11,9 @@ import {
 } from "react-native"
 
 import AppHeader from "@/components/app-header"
+import ProProfileHero from "@/components/prodashboard/ProProfileHero"
 import { handleAppError } from "@/lib/errors/appError"
 import { supabase } from "@/lib/supabase"
-
 
 /* ---------------- TYPES ---------------- */
 
@@ -30,61 +30,58 @@ type Profile = {
   id: string
   display_name: string | null
   avatar_url: string | null
+  is_pro?: boolean
 }
 
 /* ---------------- SCREEN ---------------- */
 
 export default function ReviewsScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>()
-  const router = useRouter()
 
   const [reviews, setReviews] = useState<Review[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const badgeListRef = useRef<FlatList>(null)
+
   useEffect(() => {
     if (!userId) return
 
     const loadData = async () => {
-  try {
-    if (!userId) return
+      try {
+        setLoading(true)
 
-    setLoading(true)
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, display_name, avatar_url, is_pro")
+          .eq("id", userId)
+          .single()
 
-    // Load profile
-    const { data: profileData, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, display_name, avatar_url")
-      .eq("id", userId)
-      .single()
+        if (profileError) throw profileError
 
-    if (profileError) throw profileError
+        setProfile(profileData ?? null)
 
-    setProfile(profileData ?? null)
+        const { data: reviewData, error: reviewError } = await supabase
+          .from("ratings")
+          .select(
+            "id, rating, comment, created_at, from_user_id, review_tags"
+          )
+          .eq("to_user_id", userId)
+          .order("created_at", { ascending: false })
 
-    // Load reviews WITH tags
-    const { data: reviewData, error: reviewError } = await supabase
-      .from("ratings")
-      .select(
-        "id, rating, comment, created_at, from_user_id, review_tags"
-      )
-      .eq("to_user_id", userId)
-      .order("created_at", { ascending: false })
+        if (reviewError) throw reviewError
 
-    if (reviewError) throw reviewError
-
-    setReviews(reviewData ?? [])
-  } catch (err) {
-    handleAppError(err, {
-      fallbackMessage: "Failed to load reviews.",
-    })
-    setProfile(null)
-    setReviews([])
-  } finally {
-    setLoading(false)
-  }
-}
-
+        setReviews(reviewData ?? [])
+      } catch (err) {
+        handleAppError(err, {
+          fallbackMessage: "Failed to load reviews.",
+        })
+        setProfile(null)
+        setReviews([])
+      } finally {
+        setLoading(false)
+      }
+    }
 
     loadData()
   }, [userId])
@@ -111,16 +108,41 @@ export default function ReviewsScreen() {
 
   const hasBadges = tagCounts.length > 0
 
+  /* ---------------- AUTO SCROLL BADGES ---------------- */
+
+  useEffect(() => {
+    if (!tagCounts.length) return
+
+    let scrollX = 0
+
+    const interval = setInterval(() => {
+      scrollX += 80
+
+      badgeListRef.current?.scrollToOffset({
+        offset: scrollX,
+        animated: true,
+      })
+
+      if (scrollX > tagCounts.length * 120) {
+        scrollX = 0
+        badgeListRef.current?.scrollToOffset({
+          offset: 0,
+          animated: false,
+        })
+      }
+    }, 2500)
+
+    return () => clearInterval(interval)
+  }, [tagCounts])
+
   /* ---------------- UI ---------------- */
 
   return (
     <View style={styles.screen}>
-      {/* STANDARDIZED HEADER */}
       <AppHeader
-  title="Reviews"
-  backRoute={userId ? `/public-profile/${userId}` : "/profile"}
-/>
-
+        title="Reviews"
+        backRoute={userId ? `/public-profile/${userId}` : "/profile"}
+      />
 
       {loading ? (
         <ActivityIndicator style={{ marginTop: 60 }} />
@@ -139,60 +161,86 @@ export default function ReviewsScreen() {
           contentContainerStyle={{ paddingBottom: 40 }}
           ListHeaderComponent={
             <>
-              {/* PROFILE HEADER */}
-              <View style={styles.profileHeader}>
-                <Image
-                  source={
-                    profile?.avatar_url
-                      ? { uri: profile.avatar_url }
-                      : require("../../../assets/images/avatar-placeholder.png")
-                  }
-                  style={styles.avatar}
-                />
-
-                <Text style={styles.username}>
-                  {profile?.display_name ?? "User"}
-                </Text>
-
-                {/* SUMMARY */}
-                <View style={styles.summary}>
-                  <Text style={styles.avg}>{averageRating} ★</Text>
-                  <Text style={styles.count}>
-                    {reviews.length} review
-                    {reviews.length !== 1 ? "s" : ""}
-                  </Text>
+              {profile?.is_pro ? (
+                <View style={{ marginHorizontal: -16 }}>
+                  <ProProfileHero
+                    displayName={profile.display_name}
+                    avatarUrl={profile.avatar_url}
+                    bio={null}
+                    isOwnProfile={false}
+                    isFollowing={false}
+                    followLoading={false}
+                    ratingAvg={Number(averageRating)}
+                    ratingCount={reviews.length}
+                    soldCount={0}
+                    onFollowToggle={() => {}}
+                    onMessage={() => {}}
+                    onOpenReviews={() => {}}
+                  />
                 </View>
+              ) : (
+                <View style={styles.profileHeader}>
+                  <Image
+                    source={
+                      profile?.avatar_url
+                        ? { uri: profile.avatar_url }
+                        : require("../../../assets/images/avatar-placeholder.png")
+                    }
+                    style={styles.avatar}
+                  />
 
-                {/* SELLER HIGHLIGHTS */}
-                {hasBadges && (
-                  <View style={styles.badgeSection}>
-                    <Text style={styles.badgeTitle}>
-                      Seller Highlights
+                  <Text style={styles.username}>
+                    {profile?.display_name ?? "User"}
+                  </Text>
+
+                  <View style={styles.summary}>
+                    <Text style={styles.avg}>{averageRating} ★</Text>
+                    <Text style={styles.count}>
+                      {reviews.length} review
+                      {reviews.length !== 1 ? "s" : ""}
                     </Text>
+                  </View>
+                </View>
+              )}
 
-                    <View style={styles.badgeWrap}>
-                      {tagCounts.map(([tag, count]) => (
-                        <View key={tag} style={styles.badge}>
+              {hasBadges && (
+                <View style={styles.badgeSection}>
+                  <Text style={styles.badgeTitle}>
+                    Seller Highlights
+                  </Text>
+
+                  <FlatList
+                    ref={badgeListRef}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    data={tagCounts}
+                    keyExtractor={(item) => item[0]}
+                    contentContainerStyle={{
+                      paddingHorizontal: 12,
+                      marginTop: 10,
+                    }}
+                    renderItem={({ item }) => {
+                      const [tag, count] = item
+                      return (
+                        <View style={styles.badge}>
                           <Text style={styles.badgeText}>
                             {tag} • {count}
                           </Text>
                         </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
-
-                {/* DIVIDER */}
-                <View style={styles.dividerWrap}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>REVIEWS</Text>
+                      )
+                    }}
+                  />
                 </View>
+              )}
+
+              <View style={styles.dividerWrap}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>REVIEWS</Text>
               </View>
             </>
           }
           renderItem={({ item }) => (
             <View style={styles.card}>
-              {/* STARS */}
               <View style={styles.ratingRow}>
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Ionicons
@@ -204,7 +252,6 @@ export default function ReviewsScreen() {
                 ))}
               </View>
 
-              {/* REVIEW TAGS (UNCHANGED) */}
               {item.review_tags && item.review_tags.length > 0 && (
                 <View style={styles.tagWrap}>
                   {item.review_tags.map((tag) => (
@@ -215,18 +262,15 @@ export default function ReviewsScreen() {
                 </View>
               )}
 
-              {/* COMMENT */}
               {item.comment && (
                 <Text style={styles.comment}>{item.comment}</Text>
               )}
 
-              {/* DATE */}
               <Text style={styles.date}>
-  {item.created_at
-    ? new Date(item.created_at).toLocaleDateString()
-    : ""}
-</Text>
-
+                {item.created_at
+                  ? new Date(item.created_at).toLocaleDateString()
+                  : ""}
+              </Text>
             </View>
           )}
         />
@@ -235,7 +279,7 @@ export default function ReviewsScreen() {
   )
 }
 
-/* ---------------- STYLES (UNCHANGED) ---------------- */
+/* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#EAF4EF" },
@@ -277,7 +321,6 @@ const styles = StyleSheet.create({
 
   badgeSection: {
     marginTop: 18,
-    alignItems: "center",
     width: "100%",
   },
 
@@ -285,29 +328,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     color: "#0F1E17",
-    marginBottom: 10,
-  },
-
-  badgeWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    width: "100%",
-    paddingHorizontal: 10,
-    marginTop: 6,
+    textAlign: "center",
   },
 
   badge: {
     backgroundColor: "#7FAF9B",
-    borderRadius: 14,
-    minHeight: 40,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    margin: 6,
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: "42%",
-    maxWidth: "100%",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 10,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -316,8 +345,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     color: "#0F1E17",
-    textAlign: "center",
-    lineHeight: 16,
   },
 
   dividerWrap: {
