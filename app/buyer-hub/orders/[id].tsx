@@ -1,6 +1,6 @@
 import { notify } from "@/lib/notifications/notify"
-import { useLocalSearchParams, useRouter } from "expo-router"
-import { useEffect, useState } from "react"
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router"
+import { useCallback, useEffect, useState } from "react"
 import {
   ActivityIndicator,
   Alert,
@@ -89,6 +89,12 @@ export default function BuyerOrderDetailScreen() {
     if (id) loadOrder()
   }, [id])
 
+  useFocusEffect(
+  useCallback(() => {
+    if (id) loadOrder()
+  }, [id])
+)
+
   const loadOrder = async () => {
     try {
       if (!id) return
@@ -161,150 +167,151 @@ export default function BuyerOrderDetailScreen() {
     }
   }
 
-  /* ---------------- ACTIONS ---------------- */
+ /* ---------------- ACTIONS ---------------- */
 
-  const confirmDelivery = async () => {
-    if (!order || processing) return
+const confirmDelivery = async () => {
+  if (!order || processing) return
 
-    setProcessing(true)
+  setProcessing(true)
 
-    const { error } = await supabase.functions.invoke("execute-stripe-payout", {
-      body: {
-        order_id: order.id,
-        user_id: order.buyer_id,
-      },
+  // Execute payout + completion flow via Edge Function
+  const { error } = await supabase.functions.invoke("execute-stripe-payout", {
+    body: {
+      order_id: order.id,
+      user_id: order.buyer_id,
+    },
+  })
+
+  if (error) {
+    handleAppError(error, {
+      fallbackMessage:
+        "Unable to release funds right now. Please try again shortly.",
     })
-
-    if (error) {
-      handleAppError(error, {
-        fallbackMessage:
-          "Funds are not available yet. Please try again shortly.",
-      })
-      setProcessing(false)
-      return
-    }
-
-    setConfirmVisible(false)
     setProcessing(false)
+    return
+  }
 
-    await notify({
-      userId: order.seller_id,
-      type: "order",
-      title: "Order completed",
-      body: "The buyer confirmed delivery. Funds have been released.",
-      data: {
-        route: "/seller-hub/orders/[id]",
-        params: { id: order.id },
+  setConfirmVisible(false)
+  setProcessing(false)
+
+  await notify({
+    userId: order.seller_id,
+    type: "order",
+    title: "Order completed",
+    body: "The buyer confirmed delivery. Funds have been released.",
+    data: {
+      route: "/seller-hub/orders/[id]",
+      params: { id: order.id },
+    },
+  })
+
+  router.replace("/buyer-hub/orders/completed")
+}
+
+const cancelOrder = async () => {
+  if (!order || processing) return
+
+  Alert.alert(
+    "Cancel Order?",
+    "Are you sure you want to cancel this order? This will refund your payment. Fees are non-refundable.",
+    [
+      { text: "Go Back", style: "cancel" },
+      {
+        text: "Yes, Cancel Order",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            setProcessing(true)
+
+            const { error } = await supabase.functions.invoke(
+              "cancel-order-refund",
+              {
+                body: {
+                  order_id: order.id,
+                },
+              }
+            )
+
+            if (error) {
+              Alert.alert(
+                "Cancellation Failed",
+                error.message ?? "Unable to cancel this order."
+              )
+              setProcessing(false)
+              return
+            }
+
+            Alert.alert(
+              "Order Cancelled",
+              "Your order has been cancelled and refunded."
+            )
+
+            await loadOrder()
+            setProcessing(false)
+          } catch (err) {
+            handleAppError(err, {
+              fallbackMessage:
+                "Something went wrong cancelling your order.",
+            })
+            setProcessing(false)
+          }
+        },
       },
-    })
+    ]
+  )
+}
 
-    router.replace("/buyer-hub/orders/completed")
-  }
+const cancelReturn = async () => {
+  if (!order || processing) return
 
-  const cancelOrder = async () => {
-    if (!order || processing) return
+  Alert.alert(
+    "Cancel Return?",
+    "Are you sure you want to cancel the return? This will complete the order and can't be undone.",
+    [
+      { text: "Go Back", style: "cancel" },
+      {
+        text: "Yes, Cancel Return",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            setProcessing(true)
 
-    Alert.alert(
-      "Cancel Order?",
-      "Are you sure you want to cancel this order? This will refund your payment. Fees are non-refundable.",
-      [
-        { text: "Go Back", style: "cancel" },
-        {
-          text: "Yes, Cancel Order",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setProcessing(true)
-
-              const { error } = await supabase.functions.invoke(
-                "cancel-order-refund",
-                {
-                  body: {
-                    order_id: order.id,
-                  },
-                }
-              )
-
-              if (error) {
-                Alert.alert(
-                  "Cancellation Failed",
-                  error.message ?? "Unable to cancel this order."
-                )
-                setProcessing(false)
-                return
+            const { error } = await supabase.functions.invoke(
+              "cancel-return-complete-order",
+              {
+                body: {
+                  order_id: order.id,
+                },
               }
+            )
 
-              Alert.alert(
-                "Order Cancelled",
-                "Your order has been cancelled and refunded."
-              )
-
-              await loadOrder()
-              setProcessing(false)
-            } catch (err) {
-              handleAppError(err, {
-                fallbackMessage:
-                  "Something went wrong cancelling your order.",
+            if (error) {
+              handleAppError(error, {
+                fallbackMessage: "Failed to cancel the return.",
               })
               setProcessing(false)
+              return
             }
-          },
+
+            Alert.alert(
+              "Return Cancelled",
+              "The return has been cancelled and the order is now completed."
+            )
+
+            await loadOrder()
+            setProcessing(false)
+          } catch (err) {
+            handleAppError(err, {
+              fallbackMessage:
+                "Something went wrong cancelling the return.",
+            })
+            setProcessing(false)
+          }
         },
-      ]
-    )
-  }
-
-  const cancelReturn = async () => {
-    if (!order || processing) return
-
-    Alert.alert(
-      "Cancel Return?",
-      "Are you sure you want to cancel the return? This will complete the order and can't be undone.",
-      [
-        { text: "Go Back", style: "cancel" },
-        {
-          text: "Yes, Cancel Return",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setProcessing(true)
-
-              const { error } = await supabase.functions.invoke(
-                "cancel-return-complete-order",
-                {
-                  body: {
-                    order_id: order.id,
-                  },
-                }
-              )
-
-              if (error) {
-                handleAppError(error, {
-                  fallbackMessage: "Failed to cancel the return.",
-                })
-                setProcessing(false)
-                return
-              }
-
-              Alert.alert(
-                "Return Cancelled",
-                "The return has been cancelled and the order is now completed."
-              )
-
-              await loadOrder()
-              setProcessing(false)
-            } catch (err) {
-              handleAppError(err, {
-                fallbackMessage:
-                  "Something went wrong cancelling the return.",
-              })
-              setProcessing(false)
-            }
-          },
-        },
-      ]
-    )
-  }
+      },
+    ]
+  )
+}
 
   if (loading || !order) {
     return <ActivityIndicator style={{ marginTop: 60 }} />

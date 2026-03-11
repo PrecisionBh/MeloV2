@@ -528,6 +528,16 @@ return (
         {/* 🚚 SHIPPING STATE (ONLY WHEN ORDER NEEDS TO BE SHIPPED) */}
         {showAddTracking && !isRefunded && !isCancelled && (
           <>
+
+          {/* 📦 QUANTITY ORDERED (SELLER SHIPPING WARNING) */}
+{quantity > 1 && (
+  <View style={styles.quantityCard}>
+    <Text style={styles.quantityTitle}>Multiple Items Ordered</Text>
+    <Text style={styles.quantityText}>
+      {quantity} × ${(itemUnitPrice).toFixed(2)}
+    </Text>
+  </View>
+)}
             {/* TRACKING INPUT */}
             <View style={styles.trackingCard}>
               <SellerMessage
@@ -716,4 +726,27 @@ const styles = StyleSheet.create({
   carrierTextActive: {
     color: "#FFFFFF",
   },
+
+  quantityCard: {
+  backgroundColor: "#FFF4E5",
+  borderRadius: 12,
+  padding: 12,
+  marginBottom: 10,
+  borderWidth: 1,
+  borderColor: "#F2C97D",
+},
+
+quantityTitle: {
+  fontSize: 14,
+  fontWeight: "700",
+  color: "#7A4B00",
+  marginBottom: 4,
+},
+
+quantityText: {
+  fontSize: 15,
+  fontWeight: "600",
+  color: "#7A4B00",
+},
+
 })

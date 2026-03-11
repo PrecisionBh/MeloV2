@@ -1,52 +1,43 @@
-import { useRouter } from "expo-router"
+import { useLocalSearchParams, useRouter } from "expo-router"
 import { useState } from "react"
 import {
-  ActivityIndicator,
-  Alert,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native"
-import { handleAppError } from "../lib/errors/appError"
 import { supabase } from "../lib/supabase"
 
-export default function ForgotPasswordScreen() {
+export default function VerifyOtpScreen() {
   const router = useRouter()
-  const [email, setEmail] = useState("")
+  const { email } = useLocalSearchParams()
+
+  const [code, setCode] = useState("")
   const [loading, setLoading] = useState(false)
 
-  const handleReset = async () => {
+  const handleVerify = async () => {
     try {
-      const normalizedEmail = email.trim().toLowerCase()
-
-      if (!normalizedEmail) {
-        Alert.alert("Missing Email", "Please enter your account email.")
+      if (!code.trim()) {
+        Alert.alert("Missing Code", "Please enter the verification code.")
         return
       }
 
       setLoading(true)
 
-      /* SEND OTP CODE */
-      const { error } = await supabase.auth.signInWithOtp({
-        email: normalizedEmail,
-        options: {
-          shouldCreateUser: false,
-        },
+      const { error } = await supabase.auth.verifyOtp({
+        email: String(email),
+        token: code.trim(),
+        type: "email",
       })
 
       if (error) throw error
 
-      /* NAVIGATE TO OTP SCREEN */
-      router.push(`/verify-otp?email=${normalizedEmail}`)
-
-    } catch (err) {
-      handleAppError(err, {
-        context: "forgot_password_otp_send",
-        fallbackMessage:
-          "Failed to send verification code. Please try again.",
-      })
+      router.replace("/reset-password")
+    } catch (err: any) {
+      Alert.alert("Invalid Code", err.message || "Verification failed.")
     } finally {
       setLoading(false)
     }
@@ -58,49 +49,47 @@ export default function ForgotPasswordScreen() {
       <View style={styles.branding}>
         <Text style={styles.brandTitle}>MELO</Text>
         <Text style={styles.subtitle}>
-          Reset your password securely
+          Enter the verification code
         </Text>
       </View>
 
       {/* CARD */}
       <View style={styles.card}>
-        <Text style={styles.title}>Forgot Password</Text>
+        <Text style={styles.title}>Verify Email</Text>
 
         <Text style={styles.description}>
-          Enter your email and we’ll send you a verification code.
+          Enter the 6-digit code sent to your email.
         </Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder="6 Digit Code"
           placeholderTextColor="#6B8F82"
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
+          keyboardType="number-pad"
+          value={code}
+          onChangeText={setCode}
         />
 
         <TouchableOpacity
           style={[
             styles.button,
-            (!email.trim() || loading) && styles.buttonDisabled,
+            (!code.trim() || loading) && styles.buttonDisabled,
           ]}
-          onPress={handleReset}
-          disabled={!email.trim() || loading}
+          onPress={handleVerify}
+          disabled={!code.trim() || loading}
         >
           {loading ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text style={styles.buttonText}>
-              Send Verification Code
+              Verify Code
             </Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backText}>
-            Back to Sign In
+            Back
           </Text>
         </TouchableOpacity>
       </View>
@@ -176,7 +165,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    fontSize: 16,
+    fontSize: 18,
+    textAlign: "center",
+    letterSpacing: 6,
     color: "#0F1E17",
     marginBottom: 18,
   },

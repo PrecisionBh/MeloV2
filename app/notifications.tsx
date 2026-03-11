@@ -38,6 +38,7 @@ export default function NotificationsScreen() {
           .from("notifications")
           .select("*")
           .eq("user_id", userId)
+          .eq("cleared", false)
           .order("created_at", { ascending: false })
 
         if (error) throw error
@@ -49,7 +50,7 @@ export default function NotificationsScreen() {
           fallbackMessage:
             "Failed to load notifications. Please try again.",
         })
-        setNotifications([]) // Fail-safe UI
+        setNotifications([])
       } finally {
         setLoading(false)
       }
@@ -60,7 +61,6 @@ export default function NotificationsScreen() {
 
   const openNotification = async (n: any) => {
     try {
-      // Mark as read (non-blocking UX)
       if (!n.read) {
         const { error } = await supabase
           .from("notifications")
@@ -69,11 +69,9 @@ export default function NotificationsScreen() {
 
         if (error) {
           console.error("Mark read error:", error)
-          // Silent fail — do NOT block navigation
         }
       }
 
-      // Safe route navigation
       if (n.data?.route) {
         router.push({
           pathname: n.data.route,
@@ -95,7 +93,10 @@ export default function NotificationsScreen() {
     try {
       const { error } = await supabase
         .from("notifications")
-        .delete()
+        .update({
+          cleared: true,
+          read: true,
+        })
         .eq("user_id", userId)
 
       if (error) throw error
@@ -115,10 +116,9 @@ export default function NotificationsScreen() {
       <AppHeader
         title="Notifications"
         backLabel="Back"
-        backRoute={undefined} // uses router.back() internally
+        backRoute={undefined}
       />
 
-      {/* CLEAR ALL */}
       {notifications.length > 0 && (
         <View style={styles.clearRow}>
           <TouchableOpacity onPress={clearAllNotifications}>
@@ -127,7 +127,6 @@ export default function NotificationsScreen() {
         </View>
       )}
 
-      {/* CONTENT */}
       {!userId ? (
         <View style={styles.center}>
           <Ionicons name="notifications-outline" size={56} color="#9FB8AC" />

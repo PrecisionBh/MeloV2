@@ -1,4 +1,4 @@
-import { useFocusEffect } from "expo-router"
+import { useFocusEffect, useRouter } from "expo-router"
 import { useCallback, useState } from "react"
 import {
   ActivityIndicator,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native"
 
@@ -124,6 +125,7 @@ export default function DisputeDetailCard({
   role,
 }: Props) {
   const { session } = useAuth()
+  const router = useRouter()
   const user = session?.user
 
   const [dispute, setDispute] = useState<Dispute | null>(null)
@@ -256,82 +258,122 @@ export default function DisputeDetailCard({
       "Both parties have submitted their evidence. Our admins will now review the case. Escrow will remain frozen during this process."
   }
 
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.orderRef}>
-          Order #{`Melo${dispute.order_id.slice(0, 6)}`}
-        </Text>
+  
 
-        <View
-          style={[
-            styles.badge,
-            { backgroundColor: statusMeta.color },
-          ]}
-        >
-          <Text style={styles.badgeText}>{statusMeta.label}</Text>
-        </View>
+ return (
+  <ScrollView contentContainerStyle={styles.container}>
+    <View style={styles.card}>
+      <Text style={styles.orderRef}>
+        Order #{`Melo${dispute.order_id.slice(0, 6)}`}
+      </Text>
 
-        <Text style={styles.subtext}>{statusMeta.subtext}</Text>
-
-        {guidanceMessage ? (
-          <View style={styles.guidanceBox}>
-            <Text style={styles.guidanceText}>
-              {guidanceMessage}
-            </Text>
-          </View>
-        ) : null}
-
-        <View style={styles.detailsCard}>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Dispute Reason</Text>
-            <Text style={styles.detailValue}>
-              {dispute.reason}
-            </Text>
-          </View>
-
-          <View style={styles.rowDivider} />
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Description</Text>
-            <Text style={styles.detailDescription}>
-              {dispute.description}
-            </Text>
-          </View>
-        </View>
+      <View
+        style={[
+          styles.badge,
+          { backgroundColor: statusMeta.color },
+        ]}
+      >
+        <Text style={styles.badgeText}>{statusMeta.label}</Text>
       </View>
 
-      {dispute.buyer_evidence_urls?.length ? (
-        <View style={styles.evidenceSection}>
-          <Text style={styles.sectionTitle}>Buyer Evidence</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {dispute.buyer_evidence_urls.map((url) => (
-              <Image
-                key={url}
-                source={{ uri: url }}
-                style={styles.evidenceImage}
-              />
-            ))}
-          </ScrollView>
+      <Text style={styles.subtext}>{statusMeta.subtext}</Text>
+
+      {guidanceMessage ? (
+        <View style={styles.guidanceBox}>
+          <Text style={styles.guidanceText}>
+            {guidanceMessage}
+          </Text>
         </View>
       ) : null}
 
-      {dispute.seller_evidence_urls?.length ? (
-        <View style={styles.evidenceSection}>
-          <Text style={styles.sectionTitle}>Seller Evidence</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {dispute.seller_evidence_urls.map((url) => (
-              <Image
-                key={url}
-                source={{ uri: url }}
-                style={styles.evidenceImage}
-              />
-            ))}
-          </ScrollView>
-        </View>
+      {needsToRespond ? (
+        <TouchableOpacity
+          style={styles.respondButton}
+          onPress={() =>
+            router.push(
+              role === "buyer"
+                ? `/buyer-hub/orders/disputes/respond/${dispute.id}`
+                : `/seller-hub/orders/disputes/respond/${dispute.id}`
+            )
+          }
+        >
+          <Text style={styles.respondButtonText}>
+            Respond to Dispute
+          </Text>
+        </TouchableOpacity>
       ) : null}
-    </ScrollView>
-  )
+
+      <View style={styles.detailsCard}>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Dispute Reason</Text>
+          <Text style={styles.detailValue}>
+            {dispute.reason}
+          </Text>
+        </View>
+
+        <View style={styles.rowDivider} />
+
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Description</Text>
+          <Text style={styles.detailDescription}>
+            {dispute.description}
+          </Text>
+        </View>
+      </View>
+    </View>
+
+    {dispute.buyer_evidence_urls?.length ? (
+      <View style={styles.evidenceSection}>
+        <Text style={styles.sectionTitle}>Buyer Evidence</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {dispute.buyer_evidence_urls.map((url) => (
+            <Image
+              key={url}
+              source={{ uri: url }}
+              style={styles.evidenceImage}
+            />
+          ))}
+        </ScrollView>
+      </View>
+    ) : null}
+
+    {dispute.seller_evidence_urls?.length ? (
+      <View style={styles.evidenceSection}>
+        <Text style={styles.sectionTitle}>Seller Evidence</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {dispute.seller_evidence_urls.map((url) => (
+            <Image
+              key={url}
+              source={{ uri: url }}
+              style={styles.evidenceImage}
+            />
+          ))}
+        </ScrollView>
+      </View>
+    ) : null}
+
+    {dispute.seller_response ? (
+      <View style={styles.responseCard}>
+        <Text style={styles.sectionTitle}>Seller Response</Text>
+
+        <View style={styles.responseBox}>
+          <Text style={styles.responseText}>
+            {dispute.seller_response}
+          </Text>
+
+          {dispute.seller_responded_at ? (
+            <Text style={styles.responseDate}>
+              Responded{" "}
+              {new Date(
+                dispute.seller_responded_at
+              ).toLocaleString()}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+    ) : null}
+  </ScrollView>
+)
 }
 
 const styles = StyleSheet.create({
@@ -383,6 +425,22 @@ const styles = StyleSheet.create({
     color: "#0F1E17",
     lineHeight: 18,
   },
+
+  respondButton: {
+    marginTop: 8,
+    marginBottom: 10,
+    backgroundColor: "#1F7A63",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+
+  respondButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 15,
+  },
+
   detailsCard: {
     marginTop: 12,
     backgroundColor: "#F8FBF9",
@@ -439,5 +497,28 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+
+  responseCard: {
+    marginTop: 18,
+  },
+  responseBox: {
+    backgroundColor: "#F8FBF9",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E3EFEA",
+    padding: 14,
+  },
+  responseText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F1E17",
+    lineHeight: 20,
+  },
+  responseDate: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#6B8F7D",
+    fontWeight: "700",
   },
 })

@@ -36,12 +36,9 @@ export default function Index() {
           fallbackMessage: "App failed to load correctly.",
         })
 
-        // Absolute fallback route (never brick the app)
         try {
           router.replace("/signinscreen")
-        } catch {
-          // Silent fail to prevent crash loop
-        }
+        } catch {}
       }
     }
 
@@ -55,7 +52,6 @@ export default function Index() {
         navigateSafely()
       }, remainingTime)
 
-      // HARD SAFETY CAP (prevents infinite splash if auth hangs)
       maxTimeout = setTimeout(() => {
         if (hasNavigated.current) return
         console.warn("Splash max timeout reached — forcing navigation")
@@ -88,7 +84,10 @@ export default function Index() {
           console.error("Splash image failed to load:", e.nativeEvent)
         }}
       />
-      <Text style={styles.footer}>Powered by Precision</Text>
+
+      <Text style={styles.footer}>
+        Partnered with Precision Sports LLC
+      </Text>
     </View>
   )
 }
@@ -96,18 +95,21 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0F172A",
+    backgroundColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
   },
+
   logo: {
     width: 420,
     height: 420,
   },
+
   footer: {
     position: "absolute",
-    bottom: 40,
+    bottom: 80,   // moved up so it never gets blocked
     fontSize: 12,
     color: "#94A3B8",
+    fontWeight: "600",
   },
 })

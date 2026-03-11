@@ -1,4 +1,6 @@
 import { useRouter } from "expo-router"
+import React from "react"
+
 import {
   ScrollView,
   StyleSheet,
@@ -8,140 +10,125 @@ import {
 
 import AppHeader from "@/components/app-header"
 
-export default function SellerPayoutPolicyScreen() {
+export default function PayoutsScreen() {
   const router = useRouter()
 
   return (
     <View style={styles.screen}>
-      {/* STANDARDIZED HEADER */}
       <AppHeader
-        title="Seller Payout Policy"
+        title="Seller Payouts"
         backLabel="Legal"
         backRoute="/legal"
       />
 
-      {/* CONTENT */}
       <ScrollView contentContainerStyle={styles.content}>
         <Section title="How Seller Payouts Work">
           <Text style={styles.text}>
-            Melo uses a secure escrow system to protect both buyers and sellers.
-            Funds are not released immediately after a sale and are subject to
-            order completion requirements.
+            Melo securely processes seller payouts through our payment
+            partner Stripe. When an order is successfully completed and
+            escrow is released, the seller becomes eligible to withdraw
+            their earnings.
           </Text>
         </Section>
 
-        <Section title="When Funds Are Held">
+        <Section title="Escrow Release">
           <Text style={styles.text}>
-            After a buyer places an order, payment is held in escrow until:
+            Seller funds are held in escrow while the transaction is in
+            progress. This protects both buyers and sellers during the
+            order process.
+          </Text>
+
+          <Text style={styles.text}>
+            Funds are released from escrow once:
           </Text>
 
           <Text style={styles.list}>
-            • The order is marked as delivered{"\n"}
-            • The buyer completes the inspection period{"\n"}
-            • Any reported issues are resolved
+            • The buyer confirms the order is complete{"\n"}
+            • The inspection window expires without issue{"\n"}
+            • Any dispute or return is resolved
           </Text>
         </Section>
 
-        <Section title="Shipping Requirements">
+        <Section title="Standard Payouts">
           <Text style={styles.text}>
-            Sellers must ship items promptly and provide valid tracking
-            information through the Melo platform.
+            Standard payouts are completely free. Sellers may withdraw
+            their available balance to their connected payout account
+            without any additional platform fee.
           </Text>
 
           <Text style={styles.text}>
-            Failure to provide tracking or delayed shipment may result in payout
-            delays or order cancellation.
+            Standard transfers typically take several business days
+            depending on bank processing times.
           </Text>
         </Section>
 
-        <Section title="Delivery & Inspection Period">
+        <Section title="Instant Payouts">
           <Text style={styles.text}>
-            Once delivery is confirmed, the buyer is given a limited inspection
-            period to review the item.
+            Melo also supports Instant Payouts for sellers who want to
+            access their funds immediately.
           </Text>
 
           <Text style={styles.text}>
-            During this time, the buyer may confirm completion or report an
-            issue. Funds remain on hold until this period ends.
+            Instant payouts may include a small processing fee charged
+            by Stripe to transfer funds instantly to an eligible debit
+            card or bank account.
+          </Text>
+
+          <Text style={styles.text}>
+            This fee is determined by the payment processor and may vary
+            depending on the payout destination.
           </Text>
         </Section>
 
-        <Section title="Disputes & Payout Delays">
+        <Section title="Secure Payment Processing">
           <Text style={styles.text}>
-            If a buyer reports an issue or files a dispute, payout is paused
-            until the matter is resolved.
+            Melo prioritizes secure and reliable payments. All payment
+            processing, escrow management, and payouts are handled
+            through Stripe, a trusted global payment provider.
           </Text>
 
           <Text style={styles.text}>
-            Melo may request evidence from the seller, including photos,
-            messages, or proof of shipment.
+            Stripe manages payment security, fraud protection, and
+            financial compliance to ensure transactions are processed
+            safely.
           </Text>
         </Section>
 
-        <Section title="Payout Release">
+        <Section title="Payout Requirements">
           <Text style={styles.text}>
-            Funds are released to the seller when:
-          </Text>
-
-          <Text style={styles.list}>
-            • The buyer confirms order completion{"\n"}
-            • The inspection window expires without dispute{"\n"}
-            • A dispute is resolved in the seller’s favor
+            Sellers must connect a valid payout account before
+            withdrawing funds. Identity verification or additional
+            information may be required by Stripe in order to comply
+            with financial regulations.
           </Text>
         </Section>
 
-        <Section title="Payout Method">
+        <Section title="Payment Issues or Errors">
           <Text style={styles.text}>
-            Sellers are responsible for maintaining accurate payout and tax
-            information. Melo is not responsible for failed payouts due to
-            incorrect or outdated information.
-          </Text>
-        </Section>
-
-        <Section title="Fees & Deductions">
-          <Text style={styles.text}>
-            Marketplace fees, refunds, chargebacks, or dispute resolutions may
-            be deducted from seller payouts when applicable.
-          </Text>
-        </Section>
-
-        <Section title="Seller Responsibilities">
-          <Text style={styles.text}>
-            Sellers are expected to:
+            If you experience any issues with a payout or if a payment
+            does not process correctly, please contact support so the
+            issue can be investigated.
           </Text>
 
-          <Text style={styles.list}>
-            • Accurately describe items{"\n"}
-            • Ship orders on time{"\n"}
-            • Communicate professionally with buyers{"\n"}
-            • Resolve issues in good faith
-          </Text>
-        </Section>
-
-        <Section title="Finality of Payouts">
           <Text style={styles.text}>
-            Once funds are released and the order is marked as completed,
-            payouts are considered final and non-reversible, except where
-            required by law.
+            You may reach Melo support directly at:
           </Text>
-        </Section>
 
-        <Section title="Policy Enforcement">
-          <Text style={styles.text}>
-            Melo reserves the right to delay, suspend, or withhold payouts for
-            violations of platform policies, fraud, or misuse of the service.
+          <Text style={styles.email}>
+            support@melomarketplace.app
           </Text>
         </Section>
 
         <Text style={styles.footer}>
-          This policy applies to all sellers using the Melo marketplace.
+          Payout processing times may vary depending on banking
+          institutions, payment providers, and regional regulations.
         </Text>
       </ScrollView>
     </View>
   )
 }
 
-/* ---------------- COMPONENT ---------------- */
+/* COMPONENT */
 
 function Section({
   title,
@@ -158,7 +145,7 @@ function Section({
   )
 }
 
-/* ---------------- STYLES ---------------- */
+/* STYLES */
 
 const styles = StyleSheet.create({
   screen: {
@@ -196,8 +183,15 @@ const styles = StyleSheet.create({
     color: "#0F1E17",
   },
 
+  email: {
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1F7A63",
+  },
+
   footer: {
-    marginTop: 20,
+    marginTop: 24,
     fontSize: 12,
     color: "#6B8F7D",
     textAlign: "center",

@@ -26,6 +26,12 @@ export default function LegalIndexScreen() {
         />
 
         <MenuItem
+          icon="lock-closed-outline"
+          label="Privacy Policy"
+          onPress={() => router.push("/legal/privacy")}
+        />
+
+        <MenuItem
           icon="shield-checkmark-outline"
           label="Buyer Protection"
           onPress={() => router.push("/legal/buyer-protection")}
@@ -48,6 +54,12 @@ export default function LegalIndexScreen() {
           label="FAQs"
           onPress={() => router.push("/legal/faqs")}
         />
+
+        <MenuItem
+          icon="mail-outline"
+          label="Contact Support"
+          onPress={() => router.push("/legal/contact")}
+        />
       </View>
     </View>
   )
@@ -68,6 +80,7 @@ function MenuItem({
     <TouchableOpacity style={styles.menuItem} onPress={onPress}>
       <Ionicons name={icon} size={22} color="#0F1E17" />
       <Text style={styles.menuText}>{label}</Text>
+
       <Ionicons
         name="chevron-forward"
         size={18}

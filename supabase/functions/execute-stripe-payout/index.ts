@@ -59,7 +59,10 @@ Deno.serve(async (req) => {
     return new Response("Unauthorized buyer", { status: 403 })
   }
 
+  /* -------- DOUBLE PAYOUT GUARD -------- */
+
   if (order.escrow_released) {
+    console.log("⚠️ Escrow already released — preventing double payout")
     return Response.json({ success: true, already_released: true })
   }
 
@@ -108,7 +111,35 @@ Deno.serve(async (req) => {
   }
 
   /* -----------------------------------------------------
-     STEP 5: Stripe transfer PLATFORM → SELLER
+     STEP 5: FINALIZE ESCROW LEDGER FIRST
+  ----------------------------------------------------- */
+
+  const { error: rpcErr } = await supabase.rpc(
+    "release_order_escrow",
+    {
+      p_order_id: order_id,
+      p_stripe_transfer_id: null,
+    }
+  )
+
+  if (rpcErr) {
+    console.error("❌ Ledger finalize failed", rpcErr)
+
+    await supabase
+      .from("wallets")
+      .update({ payout_locked: false })
+      .eq("user_id", seller_id)
+
+    return new Response(
+      JSON.stringify({
+        error: "Ledger finalize failed",
+      }),
+      { status: 500 }
+    )
+  }
+
+  /* -----------------------------------------------------
+     STEP 6: Stripe transfer PLATFORM → SELLER
   ----------------------------------------------------- */
 
   const { data: profile, error: profileErr } = await supabase
@@ -132,141 +163,57 @@ Deno.serve(async (req) => {
   })
 
   /* -----------------------------------------------------
-     STEP 6: Finalize escrow in Supabase (AFTER Stripe)
+     STEP 7: Update ledger with Stripe transfer ID
   ----------------------------------------------------- */
 
-  const { error: rpcErr } = await supabase.rpc(
-    "release_order_escrow",
-    {
-      p_order_id: order_id,
-      p_stripe_transfer_id: transfer.id,
+  await supabase.rpc("release_order_escrow", {
+    p_order_id: order_id,
+    p_stripe_transfer_id: transfer.id,
+  })
+
+  /* -----------------------------------------------------
+     NOTIFICATIONS
+  ----------------------------------------------------- */
+
+  try {
+    await supabase.from("notifications").insert({
+      user_id: seller_id,
+      type: "order",
+      title: "Funds Released 💰",
+      body: "Escrow has been released. Your funds are now available.",
+      data: {
+        route: "/seller-hub/wallet",
+      },
+    })
+
+    const { data: sellerProfile } = await supabase
+      .from("profiles")
+      .select("expo_push_token, notifications_enabled")
+      .eq("id", seller_id)
+      .single()
+
+    if (
+      sellerProfile?.expo_push_token &&
+      sellerProfile.notifications_enabled !== false
+    ) {
+      await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: sellerProfile.expo_push_token,
+          title: "Funds Released 💰",
+          body: "Escrow has been released. Your funds are now available.",
+          data: {
+            type: "order",
+            route: "/seller-hub/wallet",
+          },
+        }),
+      })
     }
-  )
 
-  if (rpcErr) {
-    console.error("❌ Ledger finalize failed", rpcErr)
-    return new Response(
-      JSON.stringify({
-        error: "Stripe paid but ledger finalize failed",
-        stripe_transfer_id: transfer.id,
-      }),
-      { status: 500 }
-    ) 
+  } catch (err) {
+    console.warn("[notify escrow_released] failed:", err)
   }
-
-  // ---------------- NOTIFY SELLER (ESCROW RELEASED) + REVIEWS ----------------
-try {
-  // ---------------- FUNDS RELEASED (SELLER) ----------------
-  await supabase.from("notifications").insert({
-    user_id: seller_id,
-    type: "order",
-    title: "Funds Released 💰",
-    body: "Escrow has been released. Your funds are now available.",
-    data: {
-      route: "/seller-hub/wallet",
-    },
-  })
-
-  const { data: sellerProfile } = await supabase
-    .from("profiles")
-    .select("expo_push_token, notifications_enabled")
-    .eq("id", seller_id)
-    .single()
-
-  if (
-    sellerProfile?.expo_push_token &&
-    sellerProfile.notifications_enabled !== false
-  ) {
-    await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: sellerProfile.expo_push_token,
-        title: "Funds Released 💰",
-        body: "Escrow has been released. Your funds are now available.",
-        data: {
-          type: "order",
-          route: "/seller-hub/wallet",
-        },
-      }),
-    })
-  }
-
-  // ---------------- REVIEW NOTIFICATIONS (BOTH SIDES - REQUIRED) ----------------
-
-  // In-app: Buyer reviews Seller
-  await supabase.from("notifications").insert({
-    user_id: order.buyer_id,
-    type: "review",
-    title: "Order Complete ⭐",
-    body: "Your order is complete. Please leave a review for the seller.",
-    data: {
-      route: `/reviews?orderId=${order_id}`,
-    },
-  })
-
-  // In-app: Seller reviews Buyer
-  await supabase.from("notifications").insert({
-    user_id: seller_id,
-    type: "review",
-    title: "Order Complete ⭐",
-    body: "This order is complete. Please leave a review for the buyer.",
-    data: {
-      route: `/reviews?orderId=${order_id}`,
-    },
-  })
-
-  // Fetch buyer profile for push
-  const { data: buyerProfile } = await supabase
-    .from("profiles")
-    .select("expo_push_token, notifications_enabled")
-    .eq("id", order.buyer_id)
-    .single()
-
-  // Push: Buyer reviews Seller
-  if (
-    buyerProfile?.expo_push_token &&
-    buyerProfile.notifications_enabled !== false
-  ) {
-    await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: buyerProfile.expo_push_token,
-        title: "Leave a Review ⭐",
-        body: "Your order is complete. Please review your seller.",
-        data: {
-          type: "review",
-          route: `/reviews?orderId=${order_id}`,
-        },
-      }),
-    })
-  }
-
-  // Push: Seller reviews Buyer
-  if (
-    sellerProfile?.expo_push_token &&
-    sellerProfile.notifications_enabled !== false
-  ) {
-    await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: sellerProfile.expo_push_token,
-        title: "Leave a Review ⭐",
-        body: "Order complete. Please review your buyer.",
-        data: {
-          type: "review",
-          route: `/reviews?orderId=${order_id}`,
-        },
-      }),
-    })
-  }
-
-} catch (err) {
-  console.warn("[notify escrow_released] failed:", err)
-}
-
 
   return Response.json({
     success: true,

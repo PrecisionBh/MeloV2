@@ -141,30 +141,33 @@ const isSold = !!offer?.listings?.is_sold
 if (!offer) return null
 
 
-  /* ---------------- CALCULATIONS (SELLER CLEAN VIEW) ---------------- */
+/* ---------------- CALCULATIONS (SELLER CLEAN VIEW) ---------------- */
 
-  const quantity = offer.quantity ?? 1
+const quantity = offer.quantity ?? 1
 const itemPrice = offer.current_amount * quantity
 
-  // Only show shipping if buyer pays (actual seller revenue)
-  const shippingCost =
-    offer.listings.shipping_type === "buyer_pays"
-      ? offer.listings.shipping_price ?? 0
-      : 0
+// Only show shipping if buyer pays (actual seller revenue)
+const shippingCost =
+  offer.listings.shipping_type === "buyer_pays"
+    ? offer.listings.shipping_price ?? 0
+    : 0
 
-  // 🔥 Dynamic seller fee (MATCHES webhook logic exactly)
+// 🔥 Dynamic seller fee (MATCHES webhook logic exactly)
 // Pro = 3.5%
 // Free = 5%
-// Fee applies to item total (shipping already handled in payout calc)
+// Fee applies to item + shipping (same as webhook escrow calculation)
 const sellerFeeRate = isProSeller ? 0.035 : 0.05
-const sellerFee = Number((itemPrice * sellerFeeRate).toFixed(2))
 
-  // What seller actually earns
-  const sellerPayout = Number(
-    (itemPrice - sellerFee + shippingCost).toFixed(2)
-  )
+// Escrow amount used for seller payout math
+const escrowAmount = itemPrice + shippingCost
 
-  const canRespond =
+// Seller fee
+const sellerFee = Number((escrowAmount * sellerFeeRate).toFixed(2))
+
+// What seller actually earns (must match wallet credit)
+const sellerPayout = Number((escrowAmount - sellerFee).toFixed(2))
+
+const canRespond =
   !!offer &&
   !isSold && // 🔒 prevents actions if item already sold
   !isExpired &&
@@ -172,9 +175,6 @@ const sellerFee = Number((itemPrice * sellerFeeRate).toFixed(2))
   offer.status !== "declined" &&
   offer.counter_count < 6 &&
   offer.last_actor === "buyer"
-
-
-  /* ---------------- STATUS BADGE ---------------- */
 
   /* ---------------- STATUS BADGE ---------------- */
 

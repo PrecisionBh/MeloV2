@@ -247,6 +247,7 @@ export default function BuyerOfferDetailScreen() {
         updated_at: new Date().toISOString(),
       })
       .eq("id", offer.id)
+      .eq("status", "countered")
 
     setSaving(false)
 

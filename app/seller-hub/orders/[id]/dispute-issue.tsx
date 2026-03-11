@@ -144,57 +144,50 @@ export default function SellerDisputeIssue() {
 
   /* ---------------- UPLOAD SELLER EVIDENCE (FAIL-SAFE - NO SILENT SUCCESS) ---------------- */
   const uploadImages = async (): Promise<string[]> => {
-    if (!dispute || images.length === 0) return []
+  if (!dispute || images.length === 0) return []
 
-    const uploaded: string[] = []
+  const uploaded: string[] = []
 
-    for (let i = 0; i < images.length; i++) {
-      const uri = images[i]
+  for (let i = 0; i < images.length; i++) {
+    const uri = images[i]
 
-      try {
-        const extMatch = uri.split(".").pop()?.toLowerCase()
-        const ext = extMatch && extMatch.length <= 4 ? extMatch : "jpg"
+    try {
+      const ext = uri.split(".").pop() || "jpg"
+      const fileName = `${dispute.order_id}/seller-${i}.${ext}`
 
-        const fileName = `${dispute.id}/seller-${Date.now()}-${i}.${ext}`
+      const formData = new FormData()
+      formData.append("file", {
+        uri,
+        name: fileName,
+        type: `image/${ext === "jpg" ? "jpeg" : ext}`,
+      } as any)
 
-        const fetchRes = await fetch(uri)
-        if (!fetchRes.ok) {
-          throw new Error("Failed to read local image file")
-        }
+      const { error } = await supabase.storage
+        .from("dispute-images")
+        .upload(fileName, formData, { upsert: false })
 
-        const blob = await fetchRes.blob()
-
-        const { error } = await supabase.storage
-          .from("dispute-images")
-          .upload(fileName, blob, {
-            contentType: `image/${ext === "jpg" ? "jpeg" : ext}`,
-            upsert: false,
-          })
-
-        if (error) {
-          console.error("Supabase storage error:", error)
-          throw error
-        }
-
-        const { data } = supabase.storage
-          .from("dispute-images")
-          .getPublicUrl(fileName)
-
-        if (!data?.publicUrl) {
-          throw new Error("Failed to generate public URL")
-        }
-
-        uploaded.push(data.publicUrl)
-      } catch (err) {
-        console.error("🚨 SELLER DISPUTE IMAGE UPLOAD FAILED:", err)
-        throw new Error(
-          "Image upload failed due to network/storage error. Please check your connection and try again."
-        )
+      if (error) {
+        console.error("Supabase storage error:", error)
+        throw error
       }
-    }
 
-    return uploaded
+      const { data } = supabase.storage
+        .from("dispute-images")
+        .getPublicUrl(fileName)
+
+      if (!data?.publicUrl) {
+        throw new Error("Failed to generate public URL")
+      }
+
+      uploaded.push(data.publicUrl)
+    } catch (err) {
+      console.error("🚨 SELLER DISPUTE IMAGE UPLOAD FAILED:", err)
+      throw err
+    }
   }
+
+  return uploaded
+}
 
   /* ---------------- SUBMIT SELLER RESPONSE ---------------- */
   const submitResponse = async () => {

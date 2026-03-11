@@ -13,50 +13,83 @@ export default function TermsScreen() {
 
   return (
     <View style={styles.screen}>
-      {/* STANDARDIZED HEADER */}
       <AppHeader
         title="Terms & Conditions"
         backLabel="Legal"
         backRoute="/legal"
       />
 
-      {/* CONTENT */}
       <ScrollView contentContainerStyle={styles.content}>
+
         <Section title="1. Acceptance of Terms">
           <Text style={styles.text}>
-            By accessing or using the Melo marketplace (“Melo”, “we”, “our”,
-            or “us”), you agree to be bound by these Terms and Conditions.
-            If you do not agree, you may not use the platform.
+            By accessing or using the Melo marketplace (“Melo”, “we”, “our”, or “us”),
+            you agree to be bound by these Terms & Conditions. If you do not agree
+            to these terms, you may not use the platform.
           </Text>
         </Section>
 
-        <Section title="2. Marketplace Role">
+        <Section title="2. Eligibility">
           <Text style={styles.text}>
-            Melo is a peer-to-peer marketplace that facilitates transactions
-            between buyers and sellers. Melo is not the seller of items listed
-            on the platform and does not take ownership of listed goods.
+            Users must be at least 18 years old to sell items on Melo or receive payouts.
+          </Text>
+
+          <Text style={styles.text}>
+            By creating an account, listing items, or selling on the platform,
+            you represent and warrant that you are legally capable of entering
+            into binding agreements.
+          </Text>
+
+          <Text style={styles.text}>
+            Melo may request identity verification or additional information
+            before allowing withdrawals or payouts.
           </Text>
         </Section>
 
-        <Section title="3. User Accounts">
+        <Section title="3. Melo’s Role as a Marketplace">
           <Text style={styles.text}>
-            You are responsible for maintaining the security of your account
-            and for all activity that occurs under your account. You must
-            provide accurate and complete information.
+            Melo is a peer-to-peer marketplace platform that connects buyers
+            and sellers. Melo is not the seller, buyer, manufacturer,
+            warehouse, shipper, carrier, authenticator, bank, or financial institution.
+          </Text>
+
+          <Text style={styles.text}>
+            All transactions occur directly between independent users.
+            Melo provides the platform, escrow payment tools, and dispute
+            resolution systems that help facilitate these transactions.
           </Text>
         </Section>
 
-        <Section title="4. Listings & Prohibited Items">
+        <Section title="4. Listings & Seller Responsibilities">
           <Text style={styles.text}>
-            Sellers are solely responsible for the accuracy, legality, and
-            fulfillment of their listings. The following items are prohibited:
+            Sellers are solely responsible for their listings and the items they sell.
+          </Text>
+
+          <Text style={styles.list}>
+            Sellers must ensure:{"\n"}
+            • Listings are accurate and truthful{"\n"}
+            • Items are legally owned and permitted for sale{"\n"}
+            • Items match the description and condition provided{"\n"}
+            • Orders are shipped promptly with valid tracking
+          </Text>
+
+          <Text style={styles.text}>
+            Sellers are also responsible for complying with all applicable laws
+            including tax obligations.
+          </Text>
+        </Section>
+
+        <Section title="5. Prohibited Items & Conduct">
+          <Text style={styles.text}>
+            The following items and activities are prohibited on Melo:
           </Text>
 
           <Text style={styles.list}>
             • Illegal or stolen goods{"\n"}
-            • Counterfeit or infringing items{"\n"}
+            • Counterfeit or infringing products{"\n"}
             • Weapons, drugs, or regulated substances{"\n"}
-            • Items that violate local, state, or federal laws
+            • Fraudulent listings or misrepresentation{"\n"}
+            • Off-platform payment solicitation
           </Text>
 
           <Text style={styles.text}>
@@ -65,115 +98,177 @@ export default function TermsScreen() {
           </Text>
         </Section>
 
-        <Section title="5. Payments & Escrow">
+        <Section title="6. Orders, Payments & Escrow">
           <Text style={styles.text}>
-            Payments made through Melo are held in escrow until the order is
-            completed. Funds are released to the seller once the buyer confirms
-            delivery or the escrow period expires without dispute.
+            Payments made on Melo are held in escrow until the transaction
+            is completed.
+          </Text>
+
+          <Text style={styles.text}>
+            Escrow means the buyer’s payment is temporarily held while
+            the seller ships the item and the buyer receives the order.
+          </Text>
+
+          <Text style={styles.text}>
+            Funds may remain frozen during disputes, returns, or fraud
+            reviews when necessary.
           </Text>
         </Section>
 
-        <Section title="6. Shipping & Delivery">
+        <Section title="7. Delivery, Inspection & Returns">
           <Text style={styles.text}>
-            Sellers are responsible for shipping items accurately and promptly.
-            Tracking information must be provided when required. Melo is not
-            responsible for carrier delays or lost packages.
+            After an order is delivered, buyers are provided an inspection
+            period to review the item.
+          </Text>
+
+          <Text style={styles.text}>
+            During this period, buyers may confirm the order or initiate
+            a return directly from the order page.
+          </Text>
+
+          <Text style={styles.text}>
+            Returns initiated during the inspection window do not require
+            seller approval.
           </Text>
         </Section>
 
-        <Section title="7. Buyer Responsibilities">
+        <Section title="8. Disputes">
           <Text style={styles.text}>
-            Buyers are responsible for reviewing listings carefully before
-            purchase. Once delivery is confirmed or the dispute window expires,
-            the sale is considered final.
+            If an issue cannot be resolved between a buyer and seller,
+            a dispute may be opened. Only one dispute may be opened per order.
+          </Text>
+
+          <Text style={styles.text}>
+            Melo may review available evidence including messages,
+            listing information, photos, and shipment tracking to
+            determine a resolution.
+          </Text>
+
+          <Text style={styles.text}>
+            Dispute decisions are made based on available information
+            and are considered final.
           </Text>
         </Section>
 
-        <Section title="8. Issues & Disputes">
+        <Section title="9. Fees">
           <Text style={styles.text}>
-            Buyers may report an issue after delivery if an order does not
-            match the listing or arrives damaged. Disputes must be filed within
-            the allowed timeframe. Only one dispute may be opened per order.
+            Melo charges certain marketplace fees for use of the platform.
+          </Text>
+
+          <Text style={styles.list}>
+            • Seller fee: 5% per completed sale{"\n"}
+            • Melo Pro seller fee: 3.5% per sale{"\n"}
+            • Buyer Protection Fee: 1.5% of purchase price
+          </Text>
+
+          <Text style={styles.text}>
+            Additional payment processing fees or instant payout fees
+            may apply depending on the payment method used.
+          </Text>
+
+          <Text style={styles.text}>
+            Applicable taxes may also be collected where required by law.
           </Text>
         </Section>
 
-        <Section title="9. Dispute Resolution">
+        <Section title="10. Payouts">
           <Text style={styles.text}>
-            Melo may review disputes and determine outcomes including refunds,
-            partial refunds, or release of funds. Decisions are made based on
-            available evidence and are final.
+            Seller payouts are processed securely through Stripe or other
+            authorized payment partners.
+          </Text>
+
+          <Text style={styles.text}>
+            Standard payouts are free. Instant payouts may include
+            processing fees charged by the payment provider.
+          </Text>
+
+          <Text style={styles.text}>
+            Melo may delay, hold, or reverse payouts when necessary
+            for fraud prevention, disputes, chargebacks, or compliance reviews.
           </Text>
         </Section>
 
-        <Section title="10. Fees">
+        <Section title="11. Boosts & Promotions">
           <Text style={styles.text}>
-            Melo may charge service fees or payment processing fees. All fees
-            are disclosed at checkout or within seller tools.
+            Boosts and Mega Boosts are promotional tools designed to increase
+            listing visibility within the marketplace.
           </Text>
-        </Section>
 
-        <Section title="11. Refunds">
           <Text style={styles.text}>
-            Refunds are issued only through approved dispute outcomes or as
-            otherwise required by law. Melo does not guarantee refunds outside
-            these conditions.
+            These promotional features do not guarantee visibility,
+            traffic, or sales.
           </Text>
         </Section>
 
         <Section title="12. Account Suspension">
           <Text style={styles.text}>
-            Melo reserves the right to suspend or terminate accounts for
-            violations of these Terms, fraudulent activity, or abuse of the
-            platform.
+            Melo reserves the right to suspend, restrict, or terminate
+            accounts at its discretion for violations of these Terms,
+            fraudulent activity, abuse of the platform, or risk to the
+            marketplace.
           </Text>
         </Section>
 
-        <Section title="13. Limitation of Liability">
+        <Section title="13. Disclaimers">
+          <Text style={styles.text}>
+            The Melo platform is provided “as is” and “as available”.
+            Melo makes no guarantees regarding uninterrupted service,
+            error-free operation, or transaction outcomes.
+          </Text>
+        </Section>
+
+        <Section title="14. Limitation of Liability">
           <Text style={styles.text}>
             To the fullest extent permitted by law, Melo shall not be liable
-            for indirect, incidental, or consequential damages arising from
-            use of the platform.
+            for indirect, incidental, special, or consequential damages
+            arising from the use of the platform.
           </Text>
         </Section>
 
-        <Section title="14. Indemnification">
+        <Section title="15. Indemnification">
           <Text style={styles.text}>
-            You agree to indemnify and hold harmless Melo from any claims,
-            damages, or losses arising from your use of the platform or
-            violation of these Terms.
+            Users agree to indemnify and hold harmless Melo from any claims,
+            damages, liabilities, or expenses arising from their use of
+            the platform or violation of these Terms.
           </Text>
         </Section>
 
-        <Section title="15. Arbitration & Governing Law">
+        <Section title="16. Governing Law">
           <Text style={styles.text}>
-            Any disputes arising from these Terms shall be resolved through
-            binding arbitration. These Terms are governed by applicable law.
+            These Terms shall be governed by the laws applicable in the
+            jurisdiction where Melo operates, without regard to conflict
+            of law principles.
           </Text>
         </Section>
 
-        <Section title="16. Changes to Terms">
+        <Section title="17. Changes to Terms">
           <Text style={styles.text}>
-            Melo may update these Terms at any time. Continued use of the
-            platform constitutes acceptance of the updated Terms.
+            Melo may update these Terms periodically. Continued use of the
+            platform after changes are posted constitutes acceptance of
+            the updated Terms.
           </Text>
         </Section>
 
-        <Section title="17. Contact">
+        <Section title="18. Contact">
           <Text style={styles.text}>
-            For questions regarding these Terms, contact support through the
-            Melo app.
+            If you have questions regarding these Terms, please contact:
+          </Text>
+
+          <Text style={styles.list}>
+            support@melomarketplace.app
           </Text>
         </Section>
 
         <Text style={styles.footer}>
           Last updated: {new Date().getFullYear()}
         </Text>
+
       </ScrollView>
     </View>
   )
 }
 
-/* ---------------- COMPONENTS ---------------- */
+/* COMPONENT */
 
 function Section({
   title,
@@ -190,7 +285,7 @@ function Section({
   )
 }
 
-/* ---------------- STYLES ---------------- */
+/* STYLES */
 
 const styles = StyleSheet.create({
   screen: {

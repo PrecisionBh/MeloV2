@@ -13,134 +13,234 @@ export default function BuyerProtectionScreen() {
 
   return (
     <View style={styles.screen}>
-      {/* STANDARDIZED HEADER */}
       <AppHeader
         title="Buyer Protection"
         backLabel="Legal"
         backRoute="/legal"
       />
 
-      {/* CONTENT */}
       <ScrollView contentContainerStyle={styles.content}>
-        <Section title="How Buyer Protection Works">
+        <Section title="Why Buying on Melo Is Safer">
           <Text style={styles.text}>
-            Melo provides Buyer Protection to help ensure fair and secure
-            transactions. Payments are held securely until your order is
-            completed, giving you time to inspect your purchase.
+            Melo is designed to make buying from independent sellers safer
+            than traditional peer-to-peer marketplaces.
+          </Text>
+
+          <Text style={styles.text}>
+            Instead of sending money directly to a seller and hoping
+            everything goes well, Melo protects your purchase using escrow
+            payments, delivery tracking, and a structured dispute process.
+          </Text>
+
+          <Text style={styles.text}>
+            These protections help ensure that sellers deliver what was
+            promised and that buyers have a clear path to resolve issues if
+            something goes wrong.
           </Text>
         </Section>
 
-        <Section title="Escrow & Payment Holding">
+        <Section title="Escrow Protection">
           <Text style={styles.text}>
-            When you place an order, your payment is held in escrow. Funds are
-            not released to the seller until:
+            When you purchase an item on Melo, your payment is placed into
+            escrow.
           </Text>
 
-          <Text style={styles.list}>
-            • You confirm the order is complete{"\n"}
-            • The inspection window expires without dispute
+          <Text style={styles.text}>
+            Escrow means your payment is securely held while the
+            transaction takes place. The seller does not receive the funds
+            immediately.
+          </Text>
+
+          <Text style={styles.text}>
+            The payment remains protected until the item is shipped,
+            delivered, and the order is successfully completed.
+          </Text>
+
+          <Text style={styles.text}>
+            This system protects buyers by preventing sellers from
+            receiving funds before the transaction is finished.
           </Text>
         </Section>
 
         <Section title="Delivery & Inspection Period">
           <Text style={styles.text}>
-            Once an order is marked as delivered, you have a limited inspection
-            period to review your item. During this time, you may:
+            Once the order is marked as delivered, buyers have an
+            inspection period to review their purchase.
+          </Text>
+
+          <Text style={styles.text}>
+            During this time you should confirm that the item matches the
+            listing description and arrived in the expected condition.
           </Text>
 
           <Text style={styles.list}>
             • Confirm the order is complete{"\n"}
-            • Report an issue if the item is not as described
+            • Report a problem if something is wrong{"\n"}
+            • Initiate a return during the inspection period
+          </Text>
+
+          <Text style={styles.text}>
+            If no issues are reported during the inspection window, the
+            payment is automatically released to the seller.
           </Text>
         </Section>
 
-        <Section title="Reporting an Issue">
+        <Section title="Easy Returns During Inspection">
           <Text style={styles.text}>
-            If your order arrives damaged, incorrect, or significantly different
-            from the listing, you may report an issue directly from your order
-            page. Issues must be reported within the allowed timeframe.
+            Melo gives buyers a simple and powerful way to protect their
+            purchase.
+          </Text>
+
+          <Text style={styles.text}>
+            During the inspection period after delivery, buyers may start
+            a return directly from the order page. A return request does
+            not require seller approval.
+          </Text>
+
+          <Text style={styles.text}>
+            Buyers simply tap the “Return Item” option and follow the
+            return instructions. Once a return is started, escrow funds
+            remain frozen until the item is returned or the situation is
+            resolved.
+          </Text>
+
+          <Text style={styles.text}>
+            This is extremely important for peer-to-peer marketplaces.
+            Allowing buyers to easily return items during the inspection
+            period significantly reduces disputes and protects buyers from
+            being stuck with items that are not as described.
+          </Text>
+
+          <Text style={styles.text}>
+            This system gives buyers strong protection over their money
+            while still maintaining a structured process that keeps
+            transactions fair for both parties.
           </Text>
         </Section>
 
-        <Section title="Dispute Process">
+        <Section title="Reporting a Problem">
           <Text style={styles.text}>
-            If an issue is not resolved between you and the seller, you may
-            escalate it to a formal dispute. Only one dispute may be opened per
-            order.
+            If your order arrives damaged, incorrect, or significantly
+            different from the listing description, you can report an
+            issue directly from your order page.
           </Text>
 
           <Text style={styles.text}>
-            Melo may review messages, photos, tracking data, and other evidence
-            to determine the outcome.
+            Once an issue is reported, escrow funds remain frozen while
+            the situation is reviewed.
+          </Text>
+
+          <Text style={styles.text}>
+            Buyers and sellers may submit photos, messages, tracking
+            information, and other evidence to support their case.
           </Text>
         </Section>
 
-        <Section title="Possible Outcomes">
+        <Section title="Dispute Resolution">
           <Text style={styles.text}>
-            Dispute outcomes may include:
+            If a problem cannot be resolved between the buyer and seller,
+            a formal dispute may be opened.
+          </Text>
+
+          <Text style={styles.text}>
+            Melo may review evidence such as listing descriptions,
+            shipment tracking, photos, and communication history to help
+            determine a fair outcome according to marketplace policies.
+          </Text>
+
+          <Text style={styles.text}>
+            Only one dispute may be opened per order.
+          </Text>
+        </Section>
+
+        <Section title="Refund Outcomes">
+          <Text style={styles.text}>
+            If a return or dispute results in a refund, the refunded
+            amount may include the purchase price and applicable sales
+            taxes.
+          </Text>
+
+          <Text style={styles.text}>
+            Certain fees are non-refundable because they cover services
+            that have already been provided.
           </Text>
 
           <Text style={styles.list}>
-            • Full refund{"\n"}
-            • Partial refund{"\n"}
-            • Release of funds to the seller
-          </Text>
-        </Section>
-
-        <Section title="When Protection Ends">
-          <Text style={styles.text}>
-            Buyer Protection ends when:
+            Refundable amounts may include:{"\n"}
+            • Item purchase price{"\n"}
+            • Applicable sales taxes
           </Text>
 
           <Text style={styles.list}>
-            • You confirm the order is complete{"\n"}
-            • The inspection period expires without action{"\n"}
-            • A dispute is resolved and closed
-          </Text>
-
-          <Text style={styles.text}>
-            Once protection ends, the sale is considered final.
+            Non-refundable amounts may include:{"\n"}
+            • Buyer Protection Fee{"\n"}
+            • Payment processing fees{"\n"}
+            • Shipping costs
           </Text>
         </Section>
 
-        <Section title="What Is Not Covered">
+        <Section title="What Buyer Protection Does Not Cover">
           <Text style={styles.text}>
             Buyer Protection does not cover:
           </Text>
 
           <Text style={styles.list}>
             • Buyer remorse or change of mind{"\n"}
-            • Damage after delivery{"\n"}
-            • Issues disclosed in the original listing{"\n"}
-            • Items prohibited by Melo policy
+            • Damage occurring after delivery{"\n"}
+            • Issues disclosed in the listing{"\n"}
+            • Items that violate Melo marketplace policies
           </Text>
         </Section>
 
-        <Section title="Your Responsibility as a Buyer">
+        <Section title="Buyer Responsibility">
           <Text style={styles.text}>
-            Buyers are responsible for reviewing listings carefully, asking
-            questions before purchase, and reporting issues promptly.
+            Buyers are responsible for reviewing listings carefully,
+            reading item descriptions, asking questions before purchase,
+            and reporting issues within the allowed inspection timeframe.
           </Text>
         </Section>
 
-        <Section title="Our Commitment">
+        <Section title="Buyer Protection Fee">
           <Text style={styles.text}>
-            Melo is committed to providing a fair marketplace experience.
-            While we cannot guarantee every transaction outcome, we aim to
-            protect buyers and sellers through clear rules and transparent
-            dispute resolution.
+            Melo charges a small Buyer Protection Fee to help fund secure
+            transactions and payment protection infrastructure.
+          </Text>
+
+          <Text style={styles.text}>
+            This fee is currently 1.5% of the purchase price and supports
+            the escrow system, dispute tools, and buyer safety features
+            built into the marketplace.
+          </Text>
+        </Section>
+
+        <Section title="Payment Processing & Taxes">
+          <Text style={styles.text}>
+            Payments made on Melo may include standard payment processing
+            fees charged by third-party payment providers.
+          </Text>
+
+          <Text style={styles.text}>
+            Buyers are also responsible for applicable sales taxes
+            required by federal, state, or local laws depending on the
+            purchase location.
+          </Text>
+
+          <Text style={styles.text}>
+            Taxes are calculated and collected where required in
+            accordance with applicable tax regulations.
           </Text>
         </Section>
 
         <Text style={styles.footer}>
-          Buyer Protection applies only to purchases made through the Melo app.
+          Buyer Protection applies only to purchases completed through
+          the Melo platform.
         </Text>
       </ScrollView>
     </View>
   )
 }
 
-/* ---------------- COMPONENT ---------------- */
+/* COMPONENT */
 
 function Section({
   title,
@@ -157,7 +257,7 @@ function Section({
   )
 }
 
-/* ---------------- STYLES ---------------- */
+/* STYLES */
 
 const styles = StyleSheet.create({
   screen: {

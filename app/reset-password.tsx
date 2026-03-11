@@ -1,6 +1,5 @@
-import * as Linking from "expo-linking"
 import { useRouter } from "expo-router"
-import { useEffect, useRef, useState } from "react"
+import { useState } from "react"
 import {
   ActivityIndicator,
   Alert,
@@ -20,9 +19,6 @@ export default function ResetPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [sessionReady, setSessionReady] = useState(false)
-
-  const processedUrlRef = useRef<string | null>(null)
 
   const passwordTooShort = password.length > 0 && password.length < 6
   const passwordsDoNotMatch =
@@ -32,82 +28,6 @@ export default function ResetPasswordScreen() {
     password.length >= 6 &&
     confirmPassword.length >= 6 &&
     password === confirmPassword
-
-  /* ---------------- HANDLE RESET LINK ---------------- */
-
-  useEffect(() => {
-    let subscription: any
-
-    const processUrl = async (url: string | null) => {
-      try {
-        if (!url) {
-          setSessionReady(true)
-          return
-        }
-
-        // Prevent processing same link twice
-        if (processedUrlRef.current === url) return
-        processedUrlRef.current = url
-
-        const hashIndex = url.indexOf("#")
-
-        if (hashIndex === -1) {
-          setSessionReady(true)
-          return
-        }
-
-        const fragment = url.substring(hashIndex + 1)
-
-        const params: Record<string, string> = {}
-
-        fragment.split("&").forEach((pair) => {
-          const [key, value] = pair.split("=")
-          if (key && value) {
-            params[key] = decodeURIComponent(value)
-          }
-        })
-
-        const access_token = params["access_token"]
-        const refresh_token = params["refresh_token"]
-        const type = params["type"]
-
-        if (!access_token || !refresh_token || type !== "recovery") {
-          setSessionReady(true)
-          return
-        }
-
-        const { error } = await supabase.auth.setSession({
-          access_token,
-          refresh_token,
-        })
-
-        if (error) throw error
-      } catch (err) {
-        handleAppError(err, {
-          context: "password_reset_session",
-          fallbackMessage:
-            "This reset link may have expired. Please request a new one.",
-        })
-      } finally {
-        setSessionReady(true)
-      }
-    }
-
-    const init = async () => {
-      const initialUrl = await Linking.getInitialURL()
-      await processUrl(initialUrl)
-    }
-
-    init()
-
-    subscription = Linking.addEventListener("url", ({ url }) => {
-      processUrl(url)
-    })
-
-    return () => {
-      subscription?.remove?.()
-    }
-  }, [])
 
   /* ---------------- RESET PASSWORD ---------------- */
 
@@ -124,8 +44,9 @@ export default function ResetPasswordScreen() {
       if (!session) {
         Alert.alert(
           "Session Expired",
-          "Your reset session expired. Please request a new password reset link."
+          "Your verification session expired. Please request a new reset code."
         )
+        router.replace("/forgot-password")
         return
       }
 
@@ -152,24 +73,12 @@ export default function ResetPasswordScreen() {
       handleAppError(err, {
         context: "password_reset",
         fallbackMessage:
-          "Failed to update password. Please try the reset link again.",
+          "Failed to update password. Please try again.",
       })
     } finally {
       setLoading(false)
     }
   }
-
-  /* ---------------- LOADING ---------------- */
-
-  if (!sessionReady) {
-    return (
-      <View style={styles.screen}>
-        <ActivityIndicator size="large" color="#7FAF9B" />
-      </View>
-    )
-  }
-
-  /* ---------------- UI ---------------- */
 
   return (
     <View style={styles.screen}>
@@ -180,8 +89,6 @@ export default function ResetPasswordScreen() {
 
       <View style={styles.card}>
         <Text style={styles.title}>Create New Password</Text>
-
-        {/* PASSWORD FIELD */}
 
         <View style={styles.passwordWrapper}>
           <TextInput
@@ -194,14 +101,10 @@ export default function ResetPasswordScreen() {
             autoCapitalize="none"
           />
 
-          <TouchableOpacity
-            onPress={() => setShowPassword((p) => !p)}
-          >
+          <TouchableOpacity onPress={() => setShowPassword((p) => !p)}>
             <Text style={styles.eye}>{showPassword ? "🙈" : "👁️"}</Text>
           </TouchableOpacity>
         </View>
-
-        {/* CONFIRM PASSWORD */}
 
         <View style={styles.passwordWrapper}>
           <TextInput
