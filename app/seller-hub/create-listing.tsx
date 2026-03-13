@@ -126,103 +126,136 @@ export default function CreateListingScreen() {
   const [isPro, setIsPro] = useState<boolean>(false)
   const [showLimitModal, setShowLimitModal] = useState(false)
 
-  /* ---------------- CREATE LISTING (FIXED QUANTITY + DB SAFE) ---------------- */
-  const handleCreateListing = async () => {
-    if (!session?.user) return
-    if (submitting) return
+ /* ---------------- CREATE LISTING (FIXED QUANTITY + DB SAFE) ---------------- */
+const handleCreateListing = async () => {
+  if (!session?.user) return
+  if (submitting) return
 
-    try {
-      setSubmitting(true)
+  try {
+    setSubmitting(true)
 
-            // 🔒 FREE PLAN GUARD: Max 5 ACTIVE listings (status=active AND is_sold=false)
-      if (!isPro) {
-        const { count, error: countError } = await supabase
-          .from("listings")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", session.user.id)
-          .eq("status", "active")
-          .eq("is_sold", false)
+    // 🔒 FREE PLAN GUARD: Max 5 ACTIVE listings (status=active AND is_sold=false)
+    if (!isPro) {
+      const { count, error: countError } = await supabase
+        .from("listings")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", session.user.id)
+        .eq("status", "active")
+        .eq("is_sold", false)
 
-        if (countError) throw countError
+      if (countError) throw countError
 
-        if ((count ?? 0) >= 5) {
-          setShowLimitModal(true)
-          setSubmitting(false)
-          return
-        }
-      }
-
-      const parsedPrice = parseFloat(price)
-      const parsedMinOffer = minOffer ? parseFloat(minOffer) : null
-      const parsedShippingPrice = shippingPrice ? parseFloat(shippingPrice) : 0
-
-      const rawQty = parseInt(quantity, 10)
-      const safeQuantity = isPro
-        ? Math.max(1, Number.isFinite(rawQty) ? rawQty : 1)
-        : 1
-
-      if (isNaN(parsedPrice)) {
-        Alert.alert("Invalid Price", "Please enter a valid price.")
+      if ((count ?? 0) >= 5) {
+        setShowLimitModal(true)
+        setSubmitting(false)
         return
       }
+    }
 
-      const { data, error } = await supabase
-        .from("listings")
-        .insert({
+    const parsedPrice = parseFloat(price)
+    const parsedMinOffer = minOffer ? parseFloat(minOffer) : null
+    const parsedShippingPrice = shippingPrice ? parseFloat(shippingPrice) : 0
+
+    const rawQty = parseInt(quantity, 10)
+    const safeQuantity = isPro
+      ? Math.max(1, Number.isFinite(rawQty) ? rawQty : 1)
+      : 1
+
+    if (isNaN(parsedPrice)) {
+      Alert.alert("Invalid Price", "Please enter a valid price.")
+      return
+    }
+
+    /* ---------------- UPLOAD IMAGES TO SUPABASE ---------------- */
+
+const uploadedImageUrls: string[] = []
+
+for (const uri of images) {
+  const response = await fetch(uri)
+  const arrayBuffer = await response.arrayBuffer()
+
+  const fileExtMatch = uri.match(/\.(\w+)$/)
+  const fileExt = fileExtMatch ? fileExtMatch[1] : "jpg"
+
+  const fileName = `${session.user.id}/${Date.now()}-${Math.random()
+    .toString(36)
+    .substring(2, 9)}.${fileExt}`
+
+  const { error: uploadError } = await supabase.storage
+    .from("listing-images")
+    .upload(fileName, arrayBuffer, {
+      contentType: `image/${fileExt}`,
+      upsert: false,
+    })
+
+  if (uploadError) {
+    console.log("Upload error:", uploadError)
+    throw uploadError
+  }
+
+  const { data } = supabase.storage
+    .from("listing-images")
+    .getPublicUrl(fileName)
+
+  uploadedImageUrls.push(data.publicUrl)
+}
+    const { data, error } = await supabase
+      .from("listings")
+      .insert({
+        user_id: session.user.id,
+        title: title.trim(),
+        description: description.trim() || null,
+        brand: brand,
+        category: category,
+        condition: condition,
+        price: parsedPrice,
+        allow_offers: allowOffers,
+        min_offer: allowOffers ? parsedMinOffer : null,
+        shipping_type: shippingType,
+        shipping_price: parsedShippingPrice,
+        image_urls: uploadedImageUrls, // ✅ FIXED
+        quantity: safeQuantity,
+        quantity_available: safeQuantity,
+      })
+      .select("id")
+      .single()
+
+    if (error) throw error
+
+    // 🔥 MUTUAL EXCLUSION: only ONE boost type allowed
+    if (isPro && data?.id) {
+      if (isMegaBoosted) {
+        const { error: megaError } = await supabase.rpc("mega_boost_listing", {
+          listing_id: data.id,
           user_id: session.user.id,
-          title: title.trim(),
-          description: description.trim() || null,
-          brand: brand,
-          category: category,
-          condition: condition,
-          price: parsedPrice,
-          allow_offers: allowOffers,
-          min_offer: allowOffers ? parsedMinOffer : null,
-          shipping_type: shippingType,
-          shipping_price: parsedShippingPrice,
-          image_urls: images,
-          quantity: safeQuantity,
-          quantity_available: safeQuantity,
         })
-        .select("id")
-        .single()
 
-      if (error) throw error
+        if (megaError) {
+          console.warn("Mega Boost failed:", megaError.message)
+        }
+      } else if (isBoosted) {
+        const { error: boostError } = await supabase.rpc("boost_listing", {
+          listing_id: data.id,
+          user_id: session.user.id,
+        })
 
-      // 🔥 MUTUAL EXCLUSION: only ONE boost type allowed
-if (isPro && data?.id) {
-  if (isMegaBoosted) {
-    const { error: megaError } = await supabase.rpc("mega_boost_listing", {
-      listing_id: data.id,
-      user_id: session.user.id,
-    })
-
-    if (megaError) {
-      console.warn("Mega Boost failed:", megaError.message)
+        if (boostError) {
+          console.warn("Boost failed:", boostError.message)
+        }
+      }
     }
-  } else if (isBoosted) {
-    const { error: boostError } = await supabase.rpc("boost_listing", {
-      listing_id: data.id,
-      user_id: session.user.id,
-    })
 
-    if (boostError) {
-      console.warn("Boost failed:", boostError.message)
-    }
+    Alert.alert("Success", "Your listing has been created!")
+    router.replace("/seller-hub")
+  } catch (err) {
+    handleAppError(err, {
+      context: "create_listing_insert",
+      fallbackMessage: "Failed to create listing. Please try again.",
+    })
+  } finally {
+    setSubmitting(false)
   }
 }
-
-      Alert.alert("Success", "Your listing has been created!")
-      router.replace("/seller-hub")
-    } catch (err) {
-      handleAppError(err, {
-        context: "create_listing_insert",
-        fallbackMessage: "Failed to create listing. Please try again.",
-      })
-    } finally {
-      setSubmitting(false)
-    }
-  }
 
   useFocusEffect(
     useCallback(() => {

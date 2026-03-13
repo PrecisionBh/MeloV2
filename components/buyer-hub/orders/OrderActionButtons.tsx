@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons"
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
+
 type Props = {
   /* CONTROL FLAGS (ALL LOGIC COMES FROM SCREEN) */
   showTrack: boolean

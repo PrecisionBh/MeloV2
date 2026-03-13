@@ -180,6 +180,43 @@ export default function EditListingScreen() {
         return
       }
 
+      /* ---------------- UPLOAD NEW IMAGES ONLY ---------------- */
+
+      const uploadedImageUrls: string[] = []
+
+      for (const uri of images) {
+
+        if (uri.startsWith("http")) {
+          uploadedImageUrls.push(uri)
+          continue
+        }
+
+        const response = await fetch(uri)
+        const arrayBuffer = await response.arrayBuffer()
+
+        const fileExtMatch = uri.match(/\.(\w+)$/)
+        const fileExt = fileExtMatch ? fileExtMatch[1] : "jpg"
+
+        const fileName = `${session.user.id}/${Date.now()}-${Math.random()
+          .toString(36)
+          .substring(2, 9)}.${fileExt}`
+
+        const { error: uploadError } = await supabase.storage
+          .from("listing-images")
+          .upload(fileName, arrayBuffer, {
+            contentType: `image/${fileExt}`,
+            upsert: false,
+          })
+
+        if (uploadError) throw uploadError
+
+        const { data } = supabase.storage
+          .from("listing-images")
+          .getPublicUrl(fileName)
+
+        uploadedImageUrls.push(data.publicUrl)
+      }
+
       const updatePayload: any = {
         title: title.trim(),
         description: description.trim() || null,
@@ -191,7 +228,7 @@ export default function EditListingScreen() {
         min_offer: allowOffers ? parsedMinOffer : null,
         shipping_type: shippingType,
         shipping_price: parsedShippingPrice,
-        image_urls: images,
+        image_urls: uploadedImageUrls,
         quantity: safeQuantity,
         quantity_available: safeQuantity,
       }
@@ -203,24 +240,23 @@ export default function EditListingScreen() {
 
       if (error) throw error
 
-      /* BOOST SYSTEM MATCH CREATE PAGE */
-
-     if (isPro && id) {
-  if (isMegaBoosted) {
-    await supabase.rpc("mega_boost_listing", {
-      listing_id: id,
-      user_id: session.user.id,
-    })
-  } else if (isBoosted) {
-    await supabase.rpc("boost_listing", {
-      listing_id: id,
-      user_id: session.user.id,
-    })
-  }
-}
+      if (isPro && id) {
+        if (isMegaBoosted) {
+          await supabase.rpc("mega_boost_listing", {
+            listing_id: id,
+            user_id: session.user.id,
+          })
+        } else if (isBoosted) {
+          await supabase.rpc("boost_listing", {
+            listing_id: id,
+            user_id: session.user.id,
+          })
+        }
+      }
 
       Alert.alert("Success", "Listing updated successfully!")
       router.back()
+
     } catch (err) {
       handleAppError(err, {
         context: "update_listing",

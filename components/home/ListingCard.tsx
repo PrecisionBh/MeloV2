@@ -26,7 +26,7 @@ type Props = {
   onEdit?: () => void
   onPress?: () => void
   isMegaBoost?: boolean
-  megaHero?: boolean // 👑 NEW: allows hero scaling (used by MegaBoostBlock)
+  megaHero?: boolean
 }
 
 export default function ListingCard({
@@ -37,16 +37,25 @@ export default function ListingCard({
   isMegaBoost = false,
   megaHero = false,
 }: Props) {
+
   const showFreeShipping =
     listing.shipping_type === "seller_pays"
 
   const isHero = isMegaBoost || megaHero
 
+  const imageUri =
+    listing.image_url && listing.image_url.trim() !== ""
+      ? listing.image_url
+      : null
+
+  // ✅ DEBUG LOG
+  console.log("MELO IMAGE URI:", imageUri)
+
   return (
     <TouchableOpacity
       style={[
         styles.card,
-        isHero && styles.heroCard, // 👑 slightly larger premium feel
+        isHero && styles.heroCard,
       ]}
       onPress={onPress}
       activeOpacity={0.85}
@@ -55,13 +64,15 @@ export default function ListingCard({
       <View
         style={[
           styles.imageWrap,
-          isMegaBoost && styles.megaGlowWrap, // ⭐ GOLD GLOW
+          isMegaBoost && styles.megaGlowWrap,
         ]}
       >
-        {listing.image_url ? (
+        {imageUri ? (
           <Image
-            source={{ uri: listing.image_url }}
+            source={{ uri: imageUri }}
             style={styles.image}
+            resizeMode="cover"
+            fadeDuration={0}
           />
         ) : (
           <View style={styles.placeholder}>
@@ -73,7 +84,7 @@ export default function ListingCard({
           </View>
         )}
 
-        {/* 👑 MEGA BOOST BADGE (BIGGER BUT CLEAN) */}
+        {/* MEGA BOOST BADGE */}
         {isMegaBoost && (
           <View
             style={[
@@ -125,13 +136,13 @@ export default function ListingCard({
       <View
         style={[
           styles.meta,
-          isHero && styles.metaHero, // more breathing room
+          isHero && styles.metaHero,
         ]}
       >
         <Text
           style={[
             styles.title,
-            isHero && styles.titleHero, // 🔥 BIGGER TITLE
+            isHero && styles.titleHero,
           ]}
           numberOfLines={2}
           ellipsizeMode="tail"
@@ -142,7 +153,7 @@ export default function ListingCard({
         <Text
           style={[
             styles.price,
-            isHero && styles.priceHero, // 🔥 BIGGER PRICE
+            isHero && styles.priceHero,
           ]}
         >
           ${listing.price}
@@ -167,15 +178,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  /* 👑 HERO CARD (ONLY FOR MEGA BOOST) */
   heroCard: {
-    transform: [{ scale: 1 }], // remove shrink so it feels larger
+    transform: [{ scale: 1 }],
     shadowOpacity: 0.12,
     shadowRadius: 10,
     elevation: 6,
   },
 
-  /* IMAGE */
   imageWrap: {
     position: "relative",
     aspectRatio: 1,
@@ -193,7 +202,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  /* ⭐ PREMIUM GOLD GLOW (STRONGER FOR HERO) */
   megaGlowWrap: {
     borderWidth: 2,
     borderColor: "#E6C200",
@@ -204,7 +212,6 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
 
-  /* 👑 MEGA BOOST BADGE */
   megaBoostBadge: {
     position: "absolute",
     top: 6,
@@ -237,11 +244,10 @@ const styles = StyleSheet.create({
   },
 
   megaBoostTextHero: {
-    fontSize: 12, // 🔥 bigger but still classy
+    fontSize: 12,
     letterSpacing: 0.5,
   },
 
-  /* FREE SHIPPING */
   freeShipBadge: {
     position: "absolute",
     top: 6,
@@ -261,7 +267,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 
-  /* SELLER */
   sellerActions: {
     position: "absolute",
     top: 6,
@@ -296,7 +301,6 @@ const styles = StyleSheet.create({
     color: "#0F1E17",
   },
 
-  /* META */
   meta: {
     padding: 8,
     gap: 4,
@@ -314,7 +318,7 @@ const styles = StyleSheet.create({
   },
 
   titleHero: {
-    fontSize: 16, // 🔥 bigger title for mega boost
+    fontSize: 16,
     fontWeight: "800",
   },
 
@@ -325,7 +329,7 @@ const styles = StyleSheet.create({
   },
 
   priceHero: {
-    fontSize: 18, // 🔥 bigger price = higher perceived value
+    fontSize: 18,
     fontWeight: "900",
   },
 })
