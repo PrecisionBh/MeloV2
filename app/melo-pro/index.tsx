@@ -177,13 +177,13 @@ export default function MeloProScreen() {
   />
   <PerkRow
     icon="rocket-outline"
-    title="5 boosts per month"
-    desc="Each boost lasts 7 days. Reboost to stay featured."
+    title="5 boosts with the ability to buy more"
+    desc="Each boost lasts 7 days. Boosts get refunded if your item doesnt sell. Reboost to stay featured."
   />
   <PerkRow
     icon="flame-outline"
     title="1 Mega Boost per month"
-    desc="One free Mega Boost every month to dominate the top of the marketplace."
+    desc="One free Mega Boost to dominate the top of the marketplace. Mega Boost get credited back to your account if your item doesnt sell. "
   />
   
   <PerkRow

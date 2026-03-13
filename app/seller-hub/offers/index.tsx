@@ -140,8 +140,13 @@ export default function SellerOffersScreen() {
     return "sold"
   }
 
-  // ⏳ Expiry logic
-  if (offer.status === "pending" && isExpired(offer.created_at)) {
+  // ⏳ OFFER EXPIRY
+  if (
+    (offer.status === "pending" ||
+      offer.status === "accepted" ||
+      offer.status === "countered") &&
+    isExpired(offer.created_at)
+  ) {
     return "expired"
   }
 
@@ -173,23 +178,29 @@ export default function SellerOffersScreen() {
   /* ---------------- STATUS TEXT ---------------- */
 
   const getStatusText = (offer: Offer) => {
-    if (offer.status === "pending" && isExpired(offer.created_at)) {
-      return "Expired — no response in time"
-    }
+  const derivedStatus = getDerivedStatus(offer)
 
-    switch (offer.status) {
-      case "pending":
-        return "Awaiting your response"
-      case "countered":
-        return "Negotiation ongoing"
-      case "accepted":
-        return "Accepted • Awaiting payment"
-      case "declined":
-        return "Declined"
-      default:
-        return ""
-    }
+  if (derivedStatus === "expired") {
+    return "Offer expired"
   }
+
+  if (derivedStatus === "sold") {
+    return "Item sold"
+  }
+
+  switch (derivedStatus) {
+    case "pending":
+      return "Awaiting your response"
+    case "countered":
+      return "Negotiation ongoing"
+    case "accepted":
+      return "Accepted • Awaiting payment"
+    case "declined":
+      return "Declined"
+    default:
+      return ""
+  }
+}
 
 
   /* ---------------- AUTH LOADER GUARD (FIXES SCREEN FLASH) ---------------- */

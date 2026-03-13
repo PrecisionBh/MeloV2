@@ -271,6 +271,31 @@ Deno.serve(async (req) => {
 
     console.log("✅ Wallet updated")
 
+    /* ---------- Create notification ---------- */
+console.log("🔔 Creating withdrawal notification")
+
+const { error: notificationErr } = await supabase
+  .from("notifications")
+  .insert({
+    user_id,
+    type: "withdrawal",
+    title: "Withdrawal Sent",
+    message: `Your payout of $${(net_cents / 100).toFixed(
+      2
+    )} has been sent to your bank account.`,
+    metadata: {
+      payout_id: payout.id,
+      amount_cents,
+      fee_cents,
+      net_cents,
+      payout_type,
+    },
+  })
+
+if (notificationErr) {
+  console.error("⚠️ Notification insert failed", notificationErr)
+}
+
     console.log("🏁 Withdrawal completed successfully")
 
     return new Response(

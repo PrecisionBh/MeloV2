@@ -2,11 +2,11 @@ import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
 import { useEffect, useState } from "react"
 import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native"
 
 import { useAuth } from "@/context/AuthContext"
@@ -64,7 +64,7 @@ export default function IsProButton({ style, variant = "full" }: Props) {
   if (!isPro) return null
 
   const onPress = () => {
-  router.push("/melo-pro/dashboard")
+  router.push("/seller-hub")
 }
 
   if (variant === "compact") {

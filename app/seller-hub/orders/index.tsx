@@ -13,6 +13,9 @@ export default function SellerOrdersHubScreen() {
   const { session } = useAuth()
   const sellerId = session?.user?.id
 
+  /* 🔒 FIX: start as null so UI doesn't flash */
+  const [isPro, setIsPro] = useState<boolean | null>(null)
+
   const [ordersToShipCount, setOrdersToShipCount] = useState(0)
   const [inProgressCount, setInProgressCount] = useState(0)
   const [openDisputesCount, setOpenDisputesCount] = useState(0)
@@ -22,11 +25,32 @@ export default function SellerOrdersHubScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!sellerId) return
+
+      loadProStatus()
       loadOrdersToShipCount()
       loadInProgressCount()
       loadOpenDisputesCount()
     }, [sellerId])
   )
+
+  const loadProStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("is_pro")
+        .eq("id", sellerId)
+        .single()
+
+      if (error) throw error
+
+      setIsPro(data?.is_pro ?? false)
+    } catch (err) {
+      handleAppError(err, {
+        fallbackMessage: "Failed to load Pro status.",
+      })
+      setIsPro(false)
+    }
+  }
 
   const loadOrdersToShipCount = async () => {
     try {
@@ -58,10 +82,10 @@ export default function SellerOrdersHubScreen() {
         .select("id", { count: "exact", head: true })
         .eq("seller_id", sellerId)
         .in("status", [
-  "shipped",
-  "return_started",
-  "return_processing",
-])
+          "shipped",
+          "return_started",
+          "return_processing",
+        ])
 
       if (error) throw error
 
@@ -97,38 +121,39 @@ export default function SellerOrdersHubScreen() {
 
   return (
     <View style={styles.screen}>
-      {/* STANDARDIZED MELO HEADER */}
       <AppHeader
         title="Orders"
         backLabel="Seller Hub"
         backRoute="/seller-hub"
       />
 
-      {/* 🔥 MELO PRO UPGRADE CTA (NEW – PREMIUM) */}
-      <TouchableOpacity
-        style={styles.proCard}
-        activeOpacity={0.9}
-        onPress={() => router.push("/melo-pro")}
-      >
-        <View style={styles.proGlow} />
+      {/* 🔥 SHOW ONLY IF USER IS NOT PRO (and after status loads) */}
+      {isPro === false && (
+        <TouchableOpacity
+          style={styles.proCard}
+          activeOpacity={0.9}
+          onPress={() => router.push("/melo-pro")}
+        >
+          <View style={styles.proGlow} />
 
-        <View style={styles.proRow}>
-          <View style={styles.proIconWrap}>
-            <Ionicons name="diamond-outline" size={22} color="#FFD700" />
-          </View>
+          <View style={styles.proRow}>
+            <View style={styles.proIconWrap}>
+              <Ionicons name="diamond-outline" size={22} color="#FFD700" />
+            </View>
 
-          <View style={{ flex: 1 }}>
-            <Text style={styles.proTitle}>Upgrade to Melo Pro</Text>
-            <Text style={styles.proSubtitle}>
-              Unlimited listings • 10 boosts/month • Pro badge
-            </Text>
-          </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.proTitle}>Upgrade to Melo Pro</Text>
+              <Text style={styles.proSubtitle}>
+                Unlimited listings • Lower fees • Boost advantages
+              </Text>
+            </View>
 
-          <View style={styles.proPill}>
-            <Text style={styles.proPillText}>GO PRO</Text>
+            <View style={styles.proPill}>
+              <Text style={styles.proPillText}>GO PRO</Text>
+            </View>
           </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      )}
 
       {/* MENU */}
       <View style={styles.menu}>
@@ -224,7 +249,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#EAF4EF",
   },
 
-  /* 🔥 MELO PRO CARD (DARK + GOLD LUXURY) */
   proCard: {
     marginHorizontal: 16,
     marginTop: 14,
@@ -267,7 +291,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "900",
     color: "#FFFFFF",
-    letterSpacing: 0.3,
   },
 
   proSubtitle: {
