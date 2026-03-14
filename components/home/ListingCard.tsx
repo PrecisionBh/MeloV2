@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons"
+import { Image } from "expo-image"
 import {
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -69,12 +69,13 @@ export default function ListingCard({
       >
         {imageUri ? (
           <Image
-            source={{ uri: imageUri }}
+            source={imageUri}
             style={styles.image}
-            resizeMode="cover"
-            fadeDuration={0}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={100}
             onError={(e) => {
-              console.log("IMAGE FAILED:", imageUri, e.nativeEvent)
+             
             }}
             onLoad={() => {
               console.log("IMAGE LOADED:", imageUri)

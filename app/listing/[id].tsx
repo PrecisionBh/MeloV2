@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react"
 import {
   ActivityIndicator,
   Dimensions,
-  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -12,6 +11,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native"
+
+import { Image } from "expo-image"
 
 import AppHeader from "@/components/app-header"
 import ListingDetailsSection from "@/components/listing/ListingDetailsSection"
@@ -333,7 +334,13 @@ export default function ListingDetailScreen() {
                 onPress={() => setFullscreenImage(uri)}
                 activeOpacity={0.9}
               >
-                <Image source={{ uri }} style={styles.image} />
+                <Image
+  source={uri}
+  style={styles.image}
+  contentFit="contain"
+  cachePolicy="memory-disk"
+  transition={100}
+/>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -416,7 +423,15 @@ export default function ListingDetailScreen() {
             minimumZoomScale={1}
             centerContent
           >
-            {fullscreenImage && <Image source={{ uri: fullscreenImage }} style={styles.fullImage} />}
+            {fullscreenImage && (
+  <Image
+    source={fullscreenImage}
+    style={styles.fullImage}
+    contentFit="contain"
+    cachePolicy="memory-disk"
+    transition={100}
+  />
+)}
           </ScrollView>
         </View>
       </Modal>
