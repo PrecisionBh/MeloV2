@@ -40,21 +40,14 @@ const CASE_CATEGORIES = [
 type ListingRow = {
   id: string
   title: string
-  description?: string | null
-  brand?: string | null
   price: number
   category: string
-  condition?: string | null
   image_urls: string[] | null
-  allow_offers?: boolean | null
   shipping_type?: "seller_pays" | "buyer_pays" | null
-  is_sold: boolean
-  is_removed: boolean
   user_id?: string
   is_boosted?: boolean | null
-  boost_expires_at?: string | null
   is_mega_boost?: boolean | null
-  mega_boost_expires_at?: string | null
+  created_at?: string
 }
 
 /* ---------------- SCREEN ---------------- */
@@ -87,45 +80,6 @@ export default function HomeScreen() {
     setupPushTokenIfNeeded()
   }, [])
 
-  // 🚫 ADD BAN CHECK RIGHT HERE (EXACT LOCATION)
-  useEffect(() => {
-    const enforceBan = async () => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser()
-
-        if (!user?.id) return
-
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("is_banned")
-          .eq("id", user.id)
-          .single()
-
-        if (error) {
-          console.log("[HOME] Ban check error:", error.message)
-          return
-        }
-
-        if (data?.is_banned === true) {
-          console.log("[HOME] 🚫 BANNED USER DETECTED ON HOME — SIGNING OUT")
-          await supabase.auth.signOut()
-
-          Alert.alert(
-            "Account Suspended",
-            "Your account has been suspended. Please contact support."
-          )
-
-          router.replace("/login") // or your auth route
-        }
-      } catch (err) {
-        console.log("[HOME] Ban enforcement failed:", err)
-      }
-    }
-
-    enforceBan()
-  }, [])
 
   useFocusEffect(
   useCallback(() => {
@@ -179,12 +133,13 @@ export default function HomeScreen() {
       const { data, error } = await supabase
         .from("listings")
         .select(
-          "id,title,description,brand,price,category,condition,image_urls,allow_offers,shipping_type,is_sold,is_removed,user_id,is_boosted,boost_expires_at,is_mega_boost,mega_boost_expires_at,created_at"
+          "id,title,price,category,image_urls,shipping_type,user_id,is_boosted,is_mega_boost,created_at"
         )
         .eq("status", "active")
         .eq("is_sold", false)
         .eq("is_removed", false)
         .order("created_at", { ascending: false })
+        .range(0, 24)
 
       if (error) throw error
 
@@ -198,29 +153,18 @@ export default function HomeScreen() {
           Number(l.price) > 0
       )
 
-      const now = new Date().toISOString()
-
       // 👑 ACTIVE MEGA BOOSTS (highest tier visibility)
       const activeMegaBoostRows = validRows.filter(
-        (l) =>
-          l.is_mega_boost === true &&
-          l.mega_boost_expires_at &&
-          l.mega_boost_expires_at > now
-      )
+  (l) => l.is_mega_boost === true
+)
 
       const boostedRows = validRows.filter(
-        (l) =>
-          l.is_boosted === true &&
-          l.boost_expires_at &&
-          l.boost_expires_at > now
-      )
+  (l) => l.is_boosted === true
+)
 
-      const nonBoostedRows = validRows.filter(
-        (l) =>
-          !l.is_boosted ||
-          !l.boost_expires_at ||
-          l.boost_expires_at <= now
-      )
+     const nonBoostedRows = validRows.filter(
+  (l) => !l.is_boosted
+)
 
       const followedRows = nonBoostedRows.filter((l) =>
         followedSellerIds.includes(l.user_id ?? "")
@@ -286,7 +230,7 @@ export default function HomeScreen() {
         price: Number(l.price),
         category: l.category ?? "",
         image_url: l.image_urls?.[0] ?? null,
-        allow_offers: l.allow_offers ?? false,
+        allow_offers: false,
         shipping_type: l.shipping_type ?? null,
       }))
 
@@ -299,7 +243,7 @@ export default function HomeScreen() {
           price: Number(l.price),
           category: l.category ?? "",
           image_url: l.image_urls?.[0] ?? null,
-          allow_offers: l.allow_offers ?? false,
+          allow_offers: false,
           shipping_type: l.shipping_type ?? null,
         }))
 

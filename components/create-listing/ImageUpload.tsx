@@ -1,13 +1,14 @@
 import { Ionicons } from "@expo/vector-icons"
+import * as ImageManipulator from "expo-image-manipulator"
 import * as ImagePicker from "expo-image-picker"
 import {
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native"
 
 import { handleAppError } from "@/lib/errors/appError"
@@ -33,17 +34,31 @@ export default function ImageUpload({
       const remainingSlots = max - images.length
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"], // no deprecation warning
-        quality: 0.9,
+        mediaTypes: ["images"],
+        quality: 0.35,
         allowsMultipleSelection: true,
         selectionLimit: remainingSlots,
       })
 
       if (!result.canceled && result.assets?.length > 0) {
-        const newUris = result.assets.map((asset) => asset.uri)
+
+        const convertedUris = await Promise.all(
+          result.assets.map(async (asset) => {
+            const converted = await ImageManipulator.manipulateAsync(
+              asset.uri,
+              [{ resize: { width: 1600 } }],
+              {
+                compress: 0.7,
+                format: ImageManipulator.SaveFormat.JPEG,
+              }
+            )
+
+            return converted.uri
+          })
+        )
 
         setImages((prev) => {
-          const combined = [...prev, ...newUris]
+          const combined = [...prev, ...convertedUris]
           return combined.slice(0, max)
         })
       }
@@ -64,16 +79,13 @@ export default function ImageUpload({
   return (
     <View style={styles.fullBleedSection}>
       <View style={styles.inner}>
-        {/* Title + Subtext INSIDE same box */}
         <Text style={styles.title}>Photos *</Text>
         <Text style={styles.subText}>
           Add up to {max} photos. First photo will be the cover.
         </Text>
 
-        {/* Full-width divider */}
         <View style={styles.divider} />
 
-        {/* Horizontal image row */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -117,9 +129,8 @@ export default function ImageUpload({
 }
 
 const styles = StyleSheet.create({
-  /* 🚀 TRUE EDGE-TO-EDGE BLEED */
   fullBleedSection: {
-    marginHorizontal: -16, // 🔥 THIS removes left/right edges from parent padding
+    marginHorizontal: -16,
     backgroundColor: "#EEF6F2",
   },
 
@@ -157,7 +168,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 
-  /* Bigger + more visible */
   squareWrapper: {
     width: 120,
     height: 120,
@@ -167,7 +177,7 @@ const styles = StyleSheet.create({
   squareImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 0, // sharp corners
+    borderRadius: 0,
   },
 
   addSquare: {

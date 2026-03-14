@@ -126,7 +126,6 @@ export default function CreateListingScreen() {
   const [isPro, setIsPro] = useState<boolean>(false)
   const [showLimitModal, setShowLimitModal] = useState(false)
 
- /* ---------------- CREATE LISTING (FIXED QUANTITY + DB SAFE) ---------------- */
 const handleCreateListing = async () => {
   if (!session?.user) return
   if (submitting) return
@@ -134,7 +133,7 @@ const handleCreateListing = async () => {
   try {
     setSubmitting(true)
 
-    // 🔒 FREE PLAN GUARD: Max 5 ACTIVE listings (status=active AND is_sold=false)
+    // 🔒 FREE PLAN GUARD
     if (!isPro) {
       const { count, error: countError } = await supabase
         .from("listings")
@@ -166,39 +165,42 @@ const handleCreateListing = async () => {
       return
     }
 
-    /* ---------------- UPLOAD IMAGES TO SUPABASE ---------------- */
+    /* ---------------- PARALLEL IMAGE UPLOAD ---------------- */
 
-const uploadedImageUrls: string[] = []
+    const uploadPromises = images.map(async (uri) => {
+      const response = await fetch(uri)
+      const arrayBuffer = await response.arrayBuffer()
 
-for (const uri of images) {
-  const response = await fetch(uri)
-  const arrayBuffer = await response.arrayBuffer()
+      const fileExtMatch = uri.match(/\.(\w+)$/)
+      const fileExt = fileExtMatch ? fileExtMatch[1] : "jpg"
 
-  const fileExtMatch = uri.match(/\.(\w+)$/)
-  const fileExt = fileExtMatch ? fileExtMatch[1] : "jpg"
+      const fileName = `${session.user.id}/${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 9)}.${fileExt}`
 
-  const fileName = `${session.user.id}/${Date.now()}-${Math.random()
-    .toString(36)
-    .substring(2, 9)}.${fileExt}`
+      const { error: uploadError } = await supabase.storage
+        .from("listing-images")
+        .upload(fileName, arrayBuffer, {
+          contentType: `image/${fileExt}`,
+          upsert: false,
+        })
 
-  const { error: uploadError } = await supabase.storage
-    .from("listing-images")
-    .upload(fileName, arrayBuffer, {
-      contentType: `image/${fileExt}`,
-      upsert: false,
+      if (uploadError) {
+        console.log("Upload error:", uploadError)
+        throw uploadError
+      }
+
+      const { data } = supabase.storage
+        .from("listing-images")
+        .getPublicUrl(fileName)
+
+      return data.publicUrl
     })
 
-  if (uploadError) {
-    console.log("Upload error:", uploadError)
-    throw uploadError
-  }
+    const uploadedImageUrls = await Promise.all(uploadPromises)
 
-  const { data } = supabase.storage
-    .from("listing-images")
-    .getPublicUrl(fileName)
+    /* ---------------- INSERT LISTING ---------------- */
 
-  uploadedImageUrls.push(data.publicUrl)
-}
     const { data, error } = await supabase
       .from("listings")
       .insert({
@@ -213,7 +215,7 @@ for (const uri of images) {
         min_offer: allowOffers ? parsedMinOffer : null,
         shipping_type: shippingType,
         shipping_price: parsedShippingPrice,
-        image_urls: uploadedImageUrls, // ✅ FIXED
+        image_urls: uploadedImageUrls,
         quantity: safeQuantity,
         quantity_available: safeQuantity,
       })
@@ -222,7 +224,8 @@ for (const uri of images) {
 
     if (error) throw error
 
-    // 🔥 MUTUAL EXCLUSION: only ONE boost type allowed
+    /* ---------------- BOOST LOGIC ---------------- */
+
     if (isPro && data?.id) {
       if (isMegaBoosted) {
         const { error: megaError } = await supabase.rpc("mega_boost_listing", {
