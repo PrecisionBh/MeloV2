@@ -3,7 +3,6 @@
 import AppHeader from "@/components/app-header"
 import CategoryBrandConditionSection from "@/components/create-listing/CategoryBrandConditionSection"
 import CreateListingFooter from "@/components/create-listing/CreateListingFooter"
-import FullScreenSelector from "@/components/create-listing/FullScreenSelector"
 import ImageUpload from "@/components/create-listing/ImageUpload"
 import PriceOffersSection from "@/components/create-listing/PriceOffersSection"
 import ProFeaturesSection from "@/components/create-listing/ProFeaturesSection"
@@ -14,8 +13,8 @@ import UpgradeToProButton from "@/components/pro/UpgradeToProButton"
 import { useAuth } from "@/context/AuthContext"
 import { handleAppError } from "@/lib/errors/appError"
 import { supabase } from "@/lib/supabase"
-import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router"
-import { useCallback, useEffect, useState } from "react"
+import { useLocalSearchParams, useRouter } from "expo-router"
+import { useEffect, useState } from "react"
 import {
   ActivityIndicator,
   Alert,
@@ -30,24 +29,161 @@ type ProfileRow = {
   mega_boosts_remaining: number | null
 }
 
-/* ---------------- SAME SELECTOR DATA AS CREATE ---------------- */
+type SelectorOption = {
+  label: string
+  value: string
+  subtext?: string
+}
 
-const CATEGORIES = [
-  { label: "Playing Cues", value: "playing_cue" },
-  { label: "Custom Cues", value: "custom_cue" },
-  { label: "Break Cues", value: "break_cue" },
-  { label: "Jump Cues", value: "jump_cue" },
-  { label: "Shafts", value: "shaft" },
-  { label: "Cue Cases", value: "case" },
-  { label: "Chalk", value: "chalk" },
-  { label: "Gloves", value: "gloves" },
-  { label: "Apparel", value: "apparel" },
-  { label: "Accessories", value: "accessories" },
-  { label: "Collectibles", value: "collectibles" },
-  { label: "Other", value: "other" },
+/* ---------------- SPORT TYPES ---------------- */
+
+const SPORT_TYPES: SelectorOption[] = [
+  { label: "Billiards", value: "billiards" },
+  { label: "Golf", value: "golf" },
+  { label: "Baseball / Softball", value: "baseball_softball" },
+  { label: "Cornhole", value: "cornhole" },
+  { label: "Darts", value: "darts" },
+  { label: "Disc Golf", value: "disc_golf" },
+  { label: "Bowling", value: "bowling" },
 ]
 
-const CONDITIONS = [
+/* ---------------- SPORT → CATEGORY MAP ---------------- */
+
+const SPORT_CATEGORY_MAP: Record<string, SelectorOption[]> = {
+  billiards: [
+    { label: "Playing Cues", value: "playing_cue" },
+    { label: "Custom Cues", value: "custom_cue" },
+    { label: "Break Cues", value: "break_cue" },
+    { label: "Jump Cues", value: "jump_cue" },
+    { label: "Shafts", value: "shaft" },
+    { label: "Cue Cases", value: "case" },
+    { label: "Chalk", value: "chalk" },
+    { label: "Gloves", value: "gloves" },
+    { label: "Apparel", value: "apparel" },
+    { label: "Accessories", value: "accessories" },
+    { label: "Collectibles", value: "collectibles" },
+    { label: "Other", value: "other" },
+  ],
+
+  golf: [
+    { label: "Drivers", value: "drivers" },
+    { label: "Irons", value: "irons" },
+    { label: "Putters", value: "putters" },
+    { label: "Golf Bags", value: "golf_bags" },
+    { label: "Golf Balls", value: "golf_balls" },
+    { label: "Accessories", value: "golf_accessories" },
+  ],
+
+  baseball_softball: [
+    { label: "Bats", value: "bats" },
+    { label: "Gloves", value: "gloves" },
+    { label: "Cleats", value: "cleats" },
+    { label: "Helmets", value: "helmets" },
+    { label: "Accessories", value: "accessories" },
+  ],
+
+  cornhole: [
+    { label: "Cornhole Bags", value: "cornhole_bags" },
+    { label: "Boards", value: "cornhole_boards" },
+    { label: "Board Sets", value: "cornhole_sets" },
+    { label: "Jerseys", value: "cornhole_jerseys" },
+    { label: "Accessories", value: "cornhole_accessories" },
+  ],
+
+  darts: [
+    { label: "Steel Tip Darts", value: "steel_tip_darts" },
+    { label: "Soft Tip Darts", value: "soft_tip_darts" },
+    { label: "Dart Boards", value: "dart_boards" },
+    { label: "Flights", value: "dart_flights" },
+    { label: "Shafts", value: "dart_shafts" },
+    { label: "Cases", value: "dart_cases" },
+  ],
+
+  disc_golf: [
+    { label: "Drivers", value: "disc_drivers" },
+    { label: "Midrange Discs", value: "midrange_discs" },
+    { label: "Putters", value: "disc_putters" },
+    { label: "Disc Bags", value: "disc_bags" },
+    { label: "Accessories", value: "disc_accessories" },
+  ],
+
+  bowling: [
+    { label: "Bowling Balls", value: "bowling_balls" },
+    { label: "Bowling Bags", value: "bowling_bags" },
+    { label: "Shoes", value: "bowling_shoes" },
+    { label: "Accessories", value: "bowling_accessories" },
+  ],
+}
+
+/* ---------------- SPORT → BRAND MAP ---------------- */
+
+const SPORT_BRAND_MAP: Record<string, SelectorOption[]> = {
+  billiards: [
+    { label: "Precision", value: "precision" },
+    { label: "Predator", value: "predator" },
+    { label: "Cuetec", value: "cuetec" },
+    { label: "McDermott", value: "mcdermott" },
+    { label: "Meucci", value: "meucci" },
+    { label: "Jacoby", value: "jacoby" },
+    { label: "Schon", value: "schon" },
+    { label: "Mezz", value: "mezz" },
+    { label: "Viking", value: "viking" },
+    { label: "Other", value: "other" },
+  ],
+
+  golf: [
+    { label: "Titleist", value: "titleist" },
+    { label: "Callaway", value: "callaway" },
+    { label: "TaylorMade", value: "taylormade" },
+    { label: "Ping", value: "ping" },
+    { label: "Cobra", value: "cobra" },
+    { label: "Other", value: "other" },
+  ],
+
+  baseball_softball: [
+    { label: "Easton", value: "easton" },
+    { label: "Rawlings", value: "rawlings" },
+    { label: "Louisville Slugger", value: "louisville_slugger" },
+    { label: "Wilson", value: "wilson" },
+    { label: "Other", value: "other" },
+  ],
+
+  cornhole: [
+    { label: "AllCornhole", value: "allcornhole" },
+    { label: "BG Bags", value: "bg_bags" },
+    { label: "Reynolds Bags", value: "reynolds_bags" },
+    { label: "Ultra Bags", value: "ultra_bags" },
+    { label: "Other", value: "other" },
+  ],
+
+  darts: [
+    { label: "Winmau", value: "winmau" },
+    { label: "Target", value: "target" },
+    { label: "Harrows", value: "harrows" },
+    { label: "Red Dragon", value: "red_dragon" },
+    { label: "Other", value: "other" },
+  ],
+
+  disc_golf: [
+    { label: "Innova", value: "innova" },
+    { label: "Discraft", value: "discraft" },
+    { label: "Dynamic Discs", value: "dynamic_discs" },
+    { label: "MVP", value: "mvp" },
+    { label: "Other", value: "other" },
+  ],
+
+  bowling: [
+    { label: "Storm", value: "storm" },
+    { label: "Brunswick", value: "brunswick" },
+    { label: "Hammer", value: "hammer" },
+    { label: "Ebonite", value: "ebonite" },
+    { label: "Other", value: "other" },
+  ],
+}
+
+/* ---------------- CONDITIONS ---------------- */
+
+const CONDITIONS: SelectorOption[] = [
   { label: "New", value: "new", subtext: "Brand new, unused, and in original condition." },
   { label: "Like New", value: "like_new", subtext: "Very lightly used with little to no visible wear." },
   { label: "Good", value: "good", subtext: "Used but well maintained. Minor cosmetic wear only." },
@@ -55,20 +191,10 @@ const CONDITIONS = [
   { label: "Poor", value: "poor", subtext: "Heavy wear, damage, or needs repair." },
 ]
 
-const BRANDS = [
-  { label: "Precision", value: "precision" },
-  { label: "Predator", value: "predator" },
-  { label: "Mezz", value: "mezz" },
-  { label: "Cuetec", value: "cuetec" },
-  { label: "McDermott", value: "mcdermott" },
-  { label: "Meucci", value: "meucci" },
-  { label: "Jacoby", value: "jacoby" },
-  { label: "Schon", value: "schon" },
-  { label: "Custom", value: "custom" },
-  { label: "Other", value: "other" },
-]
+/* ---------------- MAIN SCREEN ---------------- */
 
 export default function EditListingScreen() {
+
   const { session } = useAuth()
   const router = useRouter()
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -79,6 +205,7 @@ export default function EditListingScreen() {
   const [images, setImages] = useState<string[]>([])
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
+  const [sportType, setSportType] = useState<string | null>("billiards")
   const [category, setCategory] = useState<string | null>(null)
   const [brand, setBrand] = useState<string | null>(null)
   const [condition, setCondition] = useState<string | null>(null)
@@ -86,6 +213,7 @@ export default function EditListingScreen() {
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [showBrandModal, setShowBrandModal] = useState(false)
   const [showConditionModal, setShowConditionModal] = useState(false)
+  const [showSportModal, setShowSportModal] = useState(false)
 
   const [isBoosted, setIsBoosted] = useState(false)
   const [isMegaBoosted, setIsMegaBoosted] = useState(false)
@@ -111,14 +239,31 @@ export default function EditListingScreen() {
   const [checkingPro, setCheckingPro] = useState(true)
   const [isPro, setIsPro] = useState(false)
 
-  /* ---------------- LOAD EXISTING LISTING ---------------- */
+  const categoriesForSport =
+    sportType && SPORT_CATEGORY_MAP[sportType]
+      ? SPORT_CATEGORY_MAP[sportType]
+      : []
+
+  const brandsForSport =
+    sportType && SPORT_BRAND_MAP[sportType]
+      ? SPORT_BRAND_MAP[sportType]
+      : []
+
+  useEffect(() => {
+    setCategory(null)
+    setBrand(null)
+  }, [sportType])
+
+  /* ---------------- LOAD LISTING ---------------- */
 
   useEffect(() => {
     if (id) loadListing()
   }, [id])
 
   const loadListing = async () => {
+
     try {
+
       setLoadingListing(true)
 
       const { data, error } = await supabase
@@ -131,14 +276,18 @@ export default function EditListingScreen() {
 
       setTitle(data.title ?? "")
       setDescription(data.description ?? "")
+      setSportType(data.sport_type ?? "billiards")
       setBrand(data.brand ?? null)
       setCategory(data.category ?? null)
       setCondition(data.condition ?? null)
+
       setPrice(data.price ? String(data.price) : "")
       setAllowOffers(!!data.allow_offers)
       setMinOffer(data.min_offer ? String(data.min_offer) : "")
+
       setShippingType(data.shipping_type ?? null)
       setShippingPrice(data.shipping_price ? String(data.shipping_price) : "")
+
       setImages(data.image_urls ?? [])
 
       setIsBoosted(Boolean(data.is_boosted))
@@ -148,22 +297,31 @@ export default function EditListingScreen() {
         data.quantity && data.quantity > 0 ? data.quantity : 1
 
       setQuantity(String(safeLoadedQty))
+
     } catch (err) {
+
       handleAppError(err, {
         fallbackMessage: "Failed to load listing.",
       })
+
       router.back()
+
     } finally {
+
       setLoadingListing(false)
+
     }
+
   }
 
   /* ---------------- UPDATE LISTING ---------------- */
 
   const handleUpdateListing = async () => {
+
     if (!session?.user || !id || submitting) return
 
     try {
+
       setSubmitting(true)
 
       const parsedPrice = parseFloat(price)
@@ -179,8 +337,6 @@ export default function EditListingScreen() {
         Alert.alert("Invalid Price", "Please enter a valid price.")
         return
       }
-
-      /* ---------------- UPLOAD NEW IMAGES ONLY ---------------- */
 
       const uploadedImageUrls: string[] = []
 
@@ -215,11 +371,13 @@ export default function EditListingScreen() {
           .getPublicUrl(fileName)
 
         uploadedImageUrls.push(data.publicUrl)
+
       }
 
       const updatePayload: any = {
         title: title.trim(),
         description: description.trim() || null,
+        sport_type: sportType,
         brand,
         category,
         condition,
@@ -240,88 +398,26 @@ export default function EditListingScreen() {
 
       if (error) throw error
 
-      if (isPro && id) {
-  try {
-
-    if (isMegaBoosted) {
-      const { error: megaError } = await supabase.rpc("boost_listing", {
-        listing_id: id,
-        user_id: session.user.id,
-        boost_type: "mega",
-      })
-
-      if (megaError) {
-        console.warn("Mega Boost failed:", megaError.message)
-      }
-
-    } else if (isBoosted) {
-      const { error: boostError } = await supabase.rpc("boost_listing", {
-        listing_id: id,
-        user_id: session.user.id,
-        boost_type: "regular",
-      })
-
-      if (boostError) {
-        console.warn("Boost failed:", boostError.message)
-      }
-
-    }
-
-  } catch (err) {
-    console.warn("Boost RPC error:", err)
-  }
-}
       Alert.alert("Success", "Listing updated successfully!")
+
       router.back()
 
     } catch (err) {
+
       handleAppError(err, {
         context: "update_listing",
         fallbackMessage: "Failed to update listing.",
       })
+
     } finally {
+
       setSubmitting(false)
+
     }
+
   }
 
-  /* ---------------- SAME GUARDS AS CREATE ---------------- */
-
-  useFocusEffect(
-    useCallback(() => {
-      const loadGuards = async () => {
-        if (!session?.user) return
-
-        try {
-          setCheckingAddress(true)
-          setCheckingPro(true)
-
-          const { data: addressData } = await supabase
-            .from("seller_return_addresses")
-            .select("id")
-            .eq("user_id", session.user.id)
-            .maybeSingle()
-
-          setHasReturnAddress(!!addressData)
-          setShowAddressModal(!addressData)
-
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("is_pro, boosts_remaining, mega_boosts_remaining")
-            .eq("id", session.user.id)
-            .single<ProfileRow>()
-
-          setIsPro(Boolean(profile?.is_pro))
-          setBoostsRemaining(profile?.boosts_remaining ?? 0)
-          setMegaBoostsRemaining(profile?.mega_boosts_remaining ?? 0)
-        } finally {
-          setCheckingAddress(false)
-          setCheckingPro(false)
-        }
-      }
-
-      loadGuards()
-    }, [session?.user?.id])
-  )
+  /* ---------------- LOADING ---------------- */
 
   if (checkingAddress || loadingListing) {
     return (
@@ -333,6 +429,8 @@ export default function EditListingScreen() {
       </View>
     )
   }
+
+  /* ---------------- UI ---------------- */
 
   return (
     <View style={styles.screen}>
@@ -356,9 +454,11 @@ export default function EditListingScreen() {
           />
 
           <CategoryBrandConditionSection
+            sportType={sportType}
             category={category}
             brand={brand}
             condition={condition}
+            onPressSportType={() => setShowSportModal(true)}
             onPressCategory={() => setShowCategoryModal(true)}
             onPressBrand={() => setShowBrandModal(true)}
             onPressCondition={() => setShowConditionModal(true)}
@@ -413,6 +513,7 @@ export default function EditListingScreen() {
               disabled={
                 submitting ||
                 !title ||
+                !sportType ||
                 !category ||
                 !condition ||
                 !price ||
@@ -424,33 +525,6 @@ export default function EditListingScreen() {
           </View>
         </ScrollView>
       )}
-
-      <FullScreenSelector
-        visible={showCategoryModal}
-        title="Select Category"
-        options={CATEGORIES}
-        selectedValue={category ?? undefined}
-        onSelect={setCategory}
-        onClose={() => setShowCategoryModal(false)}
-      />
-
-      <FullScreenSelector
-        visible={showBrandModal}
-        title="Select Brand"
-        options={BRANDS}
-        selectedValue={brand ?? undefined}
-        onSelect={setBrand}
-        onClose={() => setShowBrandModal(false)}
-      />
-
-      <FullScreenSelector
-        visible={showConditionModal}
-        title="Select Condition"
-        options={CONDITIONS}
-        selectedValue={condition ?? undefined}
-        onSelect={setCondition}
-        onClose={() => setShowConditionModal(false)}
-      />
 
       <ReturnAddressRequiredModal
         visible={showAddressModal}

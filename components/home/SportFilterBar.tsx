@@ -1,58 +1,38 @@
 import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native"
 
-export type FilterKey =
+export type SportKey =
   | "all"
-  | "cue"
-  | "playing_cue"
-  | "custom_cue"
-  | "break_cue"
-  | "jump_cue"
-  | "case"
-  | "shaft"
-  | "apparel"
-  | "accessories"
-  | "collectibles"
-  | "other"
-
-type FilterOption = {
-  key: FilterKey
-  label: string
-}
+  | "billiards"
+  | "golf"
+  | "baseball_softball"
+  | "cornhole"
+  | "darts"
+  | "disc_golf"
+  | "bowling"
 
 type Props = {
-  active: FilterKey
-  onChange: (key: FilterKey) => void
-  options?: FilterOption[]
+  active: SportKey
+  onChange: (key: SportKey) => void
 }
 
-const FILTERS: FilterOption[] = [
-  { key: "all", label: "All" },
-  { key: "cue", label: "Cue" },
-  { key: "playing_cue", label: "Playing Cue" },
-  { key: "custom_cue", label: "Custom Cue" },
-  { key: "break_cue", label: "Break Cue" },
-  { key: "jump_cue", label: "Jump Cue" },
-  { key: "case", label: "Case" },
-  { key: "shaft", label: "Shaft" },
-  { key: "apparel", label: "Apparel" },
-  { key: "accessories", label: "Accessories" },
-  { key: "collectibles", label: "Collectible" },
-  { key: "other", label: "Other" },
+const SPORTS: { key: SportKey; label: string }[] = [
+  { key: "all", label: "All Sports" },
+  { key: "billiards", label: "Billiards" },
+  { key: "golf", label: "Golf" },
+  { key: "baseball_softball", label: "Baseball" },
+  { key: "cornhole", label: "Cornhole" },
+  { key: "darts", label: "Darts" },
+  { key: "disc_golf", label: "Disc Golf" },
+  { key: "bowling", label: "Bowling" },
 ]
 
-export default function FilterBar({
-  active,
-  onChange,
-  options,
-}: Props) {
-  const filtersToRender = options?.length ? options : FILTERS
-
+export default function SportFilterBar({ active, onChange }: Props) {
   return (
     <View style={styles.wrap}>
       <ScrollView
@@ -60,22 +40,22 @@ export default function FilterBar({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        {filtersToRender.map((f) => {
-          const isActive = active === f.key
+        {SPORTS.map((s) => {
+          const isActive = active === s.key
 
           return (
             <TouchableOpacity
-              key={f.key}
+              key={s.key}
               style={[
                 styles.pill,
                 isActive && styles.activePill,
                 isActive && styles.glow,
               ]}
-              onPress={() => onChange(f.key)}
+              onPress={() => onChange(s.key)}
               activeOpacity={0.85}
             >
               <Text style={[styles.text, isActive && styles.activeText]}>
-                {f.label}
+                {s.label}
               </Text>
             </TouchableOpacity>
           )
@@ -87,7 +67,7 @@ export default function FilterBar({
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: "#7FAF9B",
+    backgroundColor: "#7FAF9B", // Melo header sage
     paddingVertical: 8,
     paddingLeft: 12,
   },
@@ -102,6 +82,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 999,
+
+    // Light depth
     shadowColor: "#000",
     shadowOpacity: 0.06,
     shadowRadius: 4,

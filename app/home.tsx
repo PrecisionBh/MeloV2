@@ -3,11 +3,10 @@ import { useFocusEffect, useRouter } from "expo-router"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   ActivityIndicator,
-  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native"
 
 import FilterBar, { FilterKey } from "../components/home/FilterBar"
@@ -16,8 +15,10 @@ import ListingsGrid from "../components/home/ListingsGrid"
 import SearchBar from "../components/home/SearchBar"
 
 import { Listing } from "../components/home/ListingCard"
+import SportFilterBar, { SportKey } from "../components/home/SportFilterBar"
 import { handleAppError } from "../lib/errors/appError"
 import { registerForPushNotifications } from "../lib/notifications"
+import { SPORT_CATEGORY_MAP } from "../lib/sportCategories"
 import { supabase } from "../lib/supabase"
 
 /* ---------------- CATEGORY MAPS ---------------- */
@@ -61,6 +62,10 @@ export default function HomeScreen() {
   const [scrollOffset, setScrollOffset] = useState(0)
 
   const [search, setSearch] = useState("")
+
+  const [activeSport, setActiveSport] =
+    useState<SportKey>("all")
+
   const [activeCategory, setActiveCategory] =
     useState<FilterKey>("all")
 
@@ -74,10 +79,40 @@ export default function HomeScreen() {
   const [isPro, setIsPro] = useState(false)
   const [megaBoostListings, setMegaBoostListings] = useState<Listing[]>([])
 
+  /* ---------------- CATEGORY OPTIONS BY SPORT ---------------- */
+
+  const categoryOptions = useMemo(() => {
+    if (activeSport === "all") {
+      return [
+        { key: "all", label: "All" },
+        { key: "cue", label: "Cue" },
+        { key: "case", label: "Case" },
+        { key: "shaft", label: "Shaft" },
+        { key: "apparel", label: "Apparel" },
+        { key: "accessories", label: "Accessories" },
+        { key: "collectibles", label: "Collectibles" },
+        { key: "other", label: "Other" },
+      ]
+    }
+
+    return SPORT_CATEGORY_MAP[activeSport] ?? [{ key: "all", label: "All" }]
+  }, [activeSport])
+
+  /* ---------------- RESET CATEGORY WHEN SPORT CHANGES ---------------- */
+
+  useEffect(() => {
+    setActiveCategory("all")
+  }, [activeSport])
+
   /* ---------------- LOAD DATA ---------------- */
 
   useEffect(() => {
-    setupPushTokenIfNeeded()
+    registerForPushNotifications().catch((err) => {
+      handleAppError(err, {
+        context: "push_register",
+        fallbackMessage: "Failed to register for push notifications.",
+      })
+    })
   }, [])
 
   useFocusEffect(
@@ -230,7 +265,6 @@ export default function HomeScreen() {
         shipping_type: l.shipping_type ?? null,
       }))
 
-      /* 🔧 REMOVE DUPLICATE LISTINGS (FIXES IMAGE RENDER BUGS) */
       const uniqueListings = Array.from(
         new Map(normalized.map((item) => [item.id, item])).values()
       )
@@ -265,175 +299,150 @@ export default function HomeScreen() {
     setRefreshing(false)
   }
 
-  /* ---------------- UNREAD COUNTS ---------------- */
-
-const checkUnreadMessages = async () => {
+  const checkUnreadMessages = async () => {
   try {
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
-    if (!user?.id) {
+    if (!user) {
       setHasUnreadMessages(false)
       return
     }
 
-    const { data, error } = await supabase
+    const { count, error } = await supabase
       .from("messages")
-      .select("id")
-      .eq("receiver_id", user.id) // ✅ CORRECT COLUMN
-      .eq("is_read", false)       // ✅ MATCHES YOUR SCHEMA
-      .limit(1)
+      .select("id", { count: "exact", head: true })
+      .eq("receiver_id", user.id)
+      .or("is_read.eq.false,read_at.is.null")
 
     if (error) throw error
 
-    setHasUnreadMessages((data?.length ?? 0) > 0)
+    setHasUnreadMessages((count ?? 0) > 0)
   } catch (err) {
-    console.error("checkUnreadMessages error:", err)
+    handleAppError(err, {
+      context: "check_unread_messages",
+    })
     setHasUnreadMessages(false)
   }
 }
 
-const checkUnreadNotifications = async () => {
+  const checkUnreadNotifications = async () => {
   try {
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
-    if (!user?.id) {
+    if (!user) {
       setHasUnreadNotifications(false)
       return
     }
 
-    const { data, error } = await supabase
+    const { count, error } = await supabase
       .from("notifications")
-      .select("id")
-      .eq("user_id", user.id) // ✅ CORRECT
-      .eq("read", false)      // ✅ MATCHES YOUR TABLE
-      .limit(1)
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("read", false)
+      .or("cleared.is.null,cleared.eq.false")
 
     if (error) throw error
 
-    setHasUnreadNotifications((data?.length ?? 0) > 0)
+    setHasUnreadNotifications((count ?? 0) > 0)
   } catch (err) {
-    console.error("checkUnreadNotifications error:", err)
+    handleAppError(err, {
+      context: "check_unread_notifications",
+    })
     setHasUnreadNotifications(false)
   }
 }
 
-  /* ---------------- PUSH TOKEN SETUP ---------------- */
-
-  async function setupPushTokenIfNeeded() {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) return
-
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("expo_push_token")
-        .eq("id", user.id)
-        .single()
-
-      if (profileError) throw profileError
-
-      if (profile?.expo_push_token) return
-
-      const confirm = await new Promise<boolean>((resolve) => {
-        Alert.alert(
-          "Enable Notifications?",
-          "Get notified about messages, offers, and order updates.",
-          [
-            { text: "Not Now", onPress: () => resolve(false) },
-            { text: "Enable", onPress: () => resolve(true) },
-          ]
-        )
-      })
-
-      if (!confirm) return
-
-      const token = await registerForPushNotifications()
-      if (!token) return
-
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          expo_push_token: token,
-          notifications_enabled: true,
-        })
-        .eq("id", user.id)
-
-      if (updateError) throw updateError
-    } catch (err) {
-      console.error("Push setup error:", err)
-    }
-  }
-
   /* ---------------- FILTERING (FIXED & STABLE) ---------------- */
 
-const filteredListings = useMemo(() => {
-  let result = [...listings]
+  const filteredListings = useMemo(() => {
+    let result = [...listings]
 
-  /* 🔎 GLOBAL SEARCH (TITLE + CATEGORY — SAFE FOR CURRENT LISTING TYPE) */
-  if (search.trim()) {
-    const q = search.toLowerCase().trim()
+    if (search.trim()) {
+      const q = search.toLowerCase().trim()
 
-    result = result.filter((l) => {
-      const title = (l.title ?? "").toLowerCase()
-      const category = (l.category ?? "").toLowerCase()
+      result = result.filter((l) => {
+        const title = (l.title ?? "").toLowerCase()
+        const category = (l.category ?? "").toLowerCase()
 
-      return title.includes(q) || category.includes(q)
-    })
-  }
+        return title.includes(q) || category.includes(q)
+      })
+    }
 
-  /* ✅ SPECIAL FILTERS */
-  if (activeCategory === "all") {
-    return result
-  }
+    if (activeSport !== "all") {
+      const sportCategoryKeys = (
+        SPORT_CATEGORY_MAP[activeSport] ?? []
+      )
+        .map((item) => String(item.key).toLowerCase())
+        .filter((key) => key !== "all")
 
-  const active = (activeCategory ?? "").toLowerCase()
+      result = result.filter((l) => {
+        const cat = (l.category ?? "").toLowerCase()
 
-  // 🧳 CASE PILL — matches: case, hard_case, soft_case
-  if (active === "case") {
+        if (sportCategoryKeys.includes(cat)) return true
+
+        if (
+          sportCategoryKeys.includes("cue") &&
+          (CUE_CATEGORIES.includes(cat) || cat.includes("cue"))
+        ) {
+          return true
+        }
+
+        if (
+          sportCategoryKeys.includes("case") &&
+          (CASE_CATEGORIES.includes(cat) || cat.includes("case"))
+        ) {
+          return true
+        }
+
+        return false
+      })
+    }
+
+    if (activeCategory === "all") {
+      return result
+    }
+
+    const active = (activeCategory ?? "").toLowerCase()
+
+    if (active === "case") {
+      return result.filter((l) => {
+        const cat = (l.category ?? "").toLowerCase()
+        return CASE_CATEGORIES.includes(cat) || cat.includes("case")
+      })
+    }
+
+    if (active === "cue") {
+      return result.filter((l) => {
+        const cat = (l.category ?? "").toLowerCase()
+        return CUE_CATEGORIES.includes(cat) || cat.includes("cue")
+      })
+    }
+
+    if (active === "other") {
+      const knownCategories = [
+        ...CUE_CATEGORIES,
+        ...CASE_CATEGORIES,
+        "shaft",
+        "apparel",
+        "accessories",
+        "collectibles",
+      ]
+
+      return result.filter((l) => {
+        const cat = (l.category ?? "").toLowerCase()
+        return !knownCategories.includes(cat)
+      })
+    }
+
     return result.filter((l) => {
       const cat = (l.category ?? "").toLowerCase()
-      return CASE_CATEGORIES.includes(cat) || cat.includes("case")
+      return cat === active
     })
-  }
-
-  // 🎱 CUE PILL — matches all cue types
-  if (active === "cue") {
-    return result.filter((l) => {
-      const cat = (l.category ?? "").toLowerCase()
-      return CUE_CATEGORIES.includes(cat) || cat.includes("cue")
-    })
-  }
-
-  // 📦 OTHER PILL — everything not in known marketplace categories
-  if (active === "other") {
-    const knownCategories = [
-      ...CUE_CATEGORIES,
-      ...CASE_CATEGORIES,
-      "shaft",
-      "apparel",
-      "accessories",
-      "collectibles",
-    ]
-
-    return result.filter((l) => {
-      const cat = (l.category ?? "").toLowerCase()
-      return !knownCategories.includes(cat)
-    })
-  }
-
-  // 🔒 DEFAULT EXACT MATCH (for apparel, shaft, accessories, etc.)
-  return result.filter((l) => {
-    const cat = (l.category ?? "").toLowerCase()
-    return cat === active
-  })
-}, [listings, activeCategory, search])
+  }, [listings, activeCategory, activeSport, search])
 
   /* ---------------- RENDER ---------------- */
 
@@ -456,9 +465,15 @@ const filteredListings = useMemo(() => {
             placeholder="Search listings"
           />
 
+          <SportFilterBar
+            active={activeSport}
+            onChange={setActiveSport}
+          />
+
           <FilterBar
             active={activeCategory}
             onChange={setActiveCategory}
+            options={categoryOptions}
           />
         </View>
 
@@ -466,14 +481,14 @@ const filteredListings = useMemo(() => {
           <ActivityIndicator style={{ marginTop: 40 }} />
         ) : (
           <ListingsGrid
-  listings={filteredListings}
-  refreshing={refreshing}
-  onRefresh={refreshListings}
-  showUpgradeRow={!isPro}
-  megaBoostListings={megaBoostListings}
-  initialScrollOffset={scrollOffset} // 🧠 RESTORE POSITION
-  onScrollOffsetChange={setScrollOffset} // 🧠 SAVE POSITION
-/>
+            listings={filteredListings}
+            refreshing={refreshing}
+            onRefresh={refreshListings}
+            showUpgradeRow={!isPro}
+            megaBoostListings={megaBoostListings}
+            initialScrollOffset={scrollOffset}
+            onScrollOffsetChange={setScrollOffset}
+          />
         )}
 
         <TouchableOpacity
@@ -486,17 +501,14 @@ const filteredListings = useMemo(() => {
         </TouchableOpacity>
       </View>
 
-      {/* 🔥 UPGRADED DROPDOWN MENU OVERLAY */}
       {menuOpen && (
         <View style={styles.menuOverlay} pointerEvents="box-none">
-          {/* Backdrop */}
           <TouchableOpacity
             style={styles.menuBackdrop}
             activeOpacity={1}
             onPress={() => setMenuOpen(false)}
           />
 
-          {/* Dropdown Card */}
           <View style={styles.menuDropdown}>
             <MenuItem
               icon="albums-outline"
@@ -510,15 +522,15 @@ const filteredListings = useMemo(() => {
             <MenuDivider />
 
             <MenuItem
-  icon="heart-outline"
-  label="My Likes"
-  onPress={() => {
-    setMenuOpen(false)
-    router.push("/watching")
-  }}
-/>
+              icon="heart-outline"
+              label="My Likes"
+              onPress={() => {
+                setMenuOpen(false)
+                router.push("/watching")
+              }}
+            />
 
-<MenuDivider />
+            <MenuDivider />
 
             <MenuItem
               icon="briefcase-outline"

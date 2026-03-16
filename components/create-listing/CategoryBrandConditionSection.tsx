@@ -2,16 +2,30 @@ import { Ionicons } from "@expo/vector-icons"
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
 type Props = {
+  sportType: string | null
   category: string | null
   brand: string | null
   condition: string | null
+  onPressSportType: () => void
   onPressCategory: () => void
   onPressBrand: () => void
   onPressCondition: () => void
 }
 
-/* 🔥 VALUE → LABEL FORMATTERS (PREMIUM UI FIX) */
+/* 🔥 VALUE → LABEL FORMATTERS */
+
+const SPORT_LABEL_MAP: Record<string, string> = {
+  billiards: "Billiards",
+  golf: "Golf",
+  baseball_softball: "Baseball / Softball",
+  cornhole: "Cornhole",
+  darts: "Darts",
+  disc_golf: "Disc Golf",
+  bowling: "Bowling",
+}
+
 const CATEGORY_LABEL_MAP: Record<string, string> = {
+  /* Billiards */
   playing_cue: "Playing Cues",
   custom_cue: "Custom Cues",
   break_cue: "Break Cues",
@@ -23,6 +37,48 @@ const CATEGORY_LABEL_MAP: Record<string, string> = {
   apparel: "Apparel",
   accessories: "Accessories",
   collectibles: "Collectibles",
+
+  /* Golf */
+  drivers: "Drivers",
+  irons: "Irons",
+  putters: "Putters",
+  golf_bags: "Golf Bags",
+  golf_balls: "Golf Balls",
+  golf_accessories: "Golf Accessories",
+
+  /* Baseball / Softball */
+  bats: "Bats",
+  cleats: "Cleats",
+  helmets: "Helmets",
+
+  /* Cornhole */
+  cornhole_bags: "Cornhole Bags",
+  cornhole_boards: "Boards",
+  cornhole_sets: "Board Sets",
+  cornhole_jerseys: "Jerseys",
+  cornhole_accessories: "Accessories",
+
+  /* Darts */
+  steel_tip_darts: "Steel Tip Darts",
+  soft_tip_darts: "Soft Tip Darts",
+  dart_boards: "Dart Boards",
+  dart_flights: "Flights",
+  dart_shafts: "Shafts",
+  dart_cases: "Cases",
+
+  /* Disc Golf */
+  disc_drivers: "Drivers",
+  midrange_discs: "Midrange Discs",
+  disc_putters: "Putters",
+  disc_bags: "Disc Bags",
+  disc_accessories: "Accessories",
+
+  /* Bowling */
+  bowling_balls: "Bowling Balls",
+  bowling_bags: "Bowling Bags",
+  bowling_shoes: "Shoes",
+  bowling_accessories: "Accessories",
+
   other: "Other",
 }
 
@@ -32,6 +88,11 @@ const CONDITION_LABEL_MAP: Record<string, string> = {
   good: "Good",
   fair: "Fair",
   poor: "Poor",
+}
+
+function formatSport(value: string | null) {
+  if (!value) return "Select sport"
+  return SPORT_LABEL_MAP[value] || value
 }
 
 function formatCategory(value: string | null) {
@@ -46,7 +107,7 @@ function formatCondition(value: string | null) {
 
 function formatBrand(value: string | null) {
   if (!value) return "Select a brand"
-  // Convert "predator" -> "Predator", "mcdermott" -> "Mcdermott"
+
   return value
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -54,9 +115,11 @@ function formatBrand(value: string | null) {
 }
 
 export default function CategoryBrandConditionSection({
+  sportType,
   category,
   brand,
   condition,
+  onPressSportType,
   onPressCategory,
   onPressBrand,
   onPressCondition,
@@ -66,10 +129,17 @@ export default function CategoryBrandConditionSection({
       <View style={styles.inner}>
         <Text style={styles.title}>Item Details</Text>
         <Text style={styles.subText}>
-          Select category, brand, and condition.
+          Select sport, category, brand, and condition.
         </Text>
 
         <View style={styles.divider} />
+
+        {/* Sport Type */}
+        <Field
+          label="Sport *"
+          value={formatSport(sportType)}
+          onPress={onPressSportType}
+        />
 
         {/* Category */}
         <Field
@@ -122,10 +192,9 @@ function Field({
 }
 
 const styles = StyleSheet.create({
-  /* 🔥 MATCHES TITLE/DESCRIPTION SECTION */
   section: {
-    marginHorizontal: -16, // full bleed (no edges)
-    backgroundColor: "#FFFFFF", // clean builder look
+    marginHorizontal: -16,
+    backgroundColor: "#FFFFFF",
   },
 
   inner: {
