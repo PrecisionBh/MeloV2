@@ -28,8 +28,8 @@ type Listing = {
   is_boosted?: boolean
   boost_expires_at?: string | null
 
-  is_mega_boosted?: boolean
-  mega_boost_expires_at?: string | null
+  is_mega_boost?: boolean
+mega_boost_expires_at?: string | null
 }
 
 type FilterType = "active" | "inactive"
@@ -93,7 +93,7 @@ export default function MyListingsScreen() {
 
       const { data, error } = await supabase
         .from("listings")
-        .select("id,title,price,image_urls,status,is_boosted,boost_expires_at,is_mega_boosted,mega_boost_expires_at")
+        .select("id,title,price,image_urls,status,is_boosted,boost_expires_at,is_mega_boost,mega_boost_expires_at")
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false })
 

@@ -57,7 +57,7 @@ export default function BoostsCard({
           .from("listings")
           .select("id", { count: "exact", head: true })
           .eq("user_id", userId)
-          .eq("is_mega_boosted", true)
+          .eq("is_mega_boost", true)
           .gt("mega_boost_expires_at", now)
 
         setActiveMegaBoosts(megaCount ?? 0)

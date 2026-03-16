@@ -2,7 +2,7 @@
   "expo": {
     "name": "Melo-MP",
     "slug": "Melo-MP",
-    "version": "1.0.7",
+    "version": "1.0.9",
     "orientation": "portrait",
     "scheme": "melomp",
     "userInterfaceStyle": "automatic",
