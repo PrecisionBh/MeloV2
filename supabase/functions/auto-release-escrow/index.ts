@@ -30,58 +30,39 @@ Deno.serve(async (req) => {
   const now = new Date().toISOString()
   console.log("🧪 CURRENT TIME (ISO):", now)
 
-  // 🔍 DEBUG: show ALL possible candidates (no filters except release_at)
-  const { data: debugAll, error: debugErr } = await supabase
-    .from("orders")
-    .select("id, escrow_release_at, escrow_released, is_disputed")
-
-  console.log("🧪 ALL ORDERS SNAPSHOT:", debugAll)
-
-  if (debugErr) {
-    console.error("❌ Debug fetch failed", debugErr)
-  }
-
-  // 🔍 Lightweight check
-  const { data: eligible, error: eligibleErr } = await supabase
-    .from("orders")
-    .select("id, escrow_release_at, escrow_released, is_disputed")
-    .eq("escrow_released", false)
-    .eq("is_disputed", false)
-    .not("escrow_release_at", "is", null)
-    .lte("escrow_release_at", now)
-    .limit(1)
-
-  console.log("🧪 ELIGIBLE RESULT:", eligible)
-
-  if (eligibleErr) {
-    console.error("❌ Eligible check failed", eligibleErr)
-    return new Response("Error", { status: 500 })
-  }
-
-  if (!eligible?.length) {
-    console.log("🚫 No eligible escrows found after filter")
-    return Response.json({ processed: 0 })
-  }
-
-  // 🔥 Fetch all eligible
+  // 🔥 Fetch ALL eligible orders (SAFE FILTER)
   const { data: orders, error: ordersErr } = await supabase
     .from("orders")
     .select("*")
+    .eq("tracking_status", "delivered") // ✅ MUST be delivered
     .eq("escrow_released", false)
     .eq("is_disputed", false)
+    .is("return_requested_at", null) // ✅ BLOCK returns
     .not("escrow_release_at", "is", null)
     .lte("escrow_release_at", now)
-
-  console.log("🧪 FULL ELIGIBLE ORDERS:", orders)
 
   if (ordersErr) {
     console.error("❌ Orders fetch failed", ordersErr)
     return new Response("Error", { status: 500 })
   }
 
+  if (!orders?.length) {
+    console.log("🚫 No eligible escrows found")
+    return Response.json({ processed: 0 })
+  }
+
+  console.log(`💰 Found ${orders.length} eligible orders`)
+
+  // 🔥 Get Stripe balance ONCE
+  const balance = await stripe.balance.retrieve()
+  const availableUSD =
+    balance.available.find(b => b.currency === "usd")?.amount ?? 0
+
+  console.log("💵 Stripe available balance:", availableUSD)
+
   let processed = 0
 
-  for (const order of orders ?? []) {
+  for (const order of orders) {
     try {
       console.log("💰 Processing order:", order.id)
 
@@ -91,11 +72,6 @@ Deno.serve(async (req) => {
         continue
       }
 
-      const balance = await stripe.balance.retrieve()
-      const availableUSD =
-        balance.available.find(b => b.currency === "usd")?.amount ?? 0
-
-      console.log("💵 Stripe available balance:", availableUSD)
       console.log("💵 Order requires:", order.seller_net_cents)
 
       if (availableUSD < order.seller_net_cents) {
@@ -109,13 +85,8 @@ Deno.serve(async (req) => {
         .eq("id", order.seller_id)
         .single()
 
-      if (profileErr) {
-        console.error("❌ Profile fetch error", profileErr)
-        continue
-      }
-
-      if (!profile?.stripe_account_id) {
-        console.warn("⚠️ No stripe account for seller:", order.seller_id)
+      if (profileErr || !profile?.stripe_account_id) {
+        console.warn("⚠️ Missing Stripe account:", order.seller_id)
         continue
       }
 
@@ -133,7 +104,7 @@ Deno.serve(async (req) => {
 
       console.log("✅ Stripe transfer created:", transfer.id)
 
-      // 🧠 FINALIZE
+      // 🧠 FINALIZE (only AFTER transfer succeeds)
       const { error: rpcError } = await supabase.rpc("release_order_escrow", {
         p_order_id: order.id,
         p_stripe_transfer_id: transfer.id,

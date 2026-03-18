@@ -6,7 +6,8 @@ import {
   Alert,
   ScrollView,
   StyleSheet,
-  View
+  Text,
+  View,
 } from "react-native"
 
 import AppHeader from "@/components/app-header"
@@ -27,6 +28,8 @@ type OrderStatus =
   | "created"
   | "paid"
   | "shipped"
+  | "in_transit"
+  | "delivered"
   | "return_started"
   | "return_processing"
   | "issue_open"
@@ -35,7 +38,7 @@ type OrderStatus =
 
 type Order = {
   id: string
-  public_order_number?: string | null 
+  public_order_number?: string | null
   buyer_id: string
   seller_id: string
   status: OrderStatus
@@ -51,6 +54,8 @@ type Order = {
   carrier: string | null
   completed_at: string | null
   is_disputed: boolean | null
+  last_tracking_status?: string | null
+  delivered_at?: string | null
   listing_snapshot: {
     title?: string | null
   } | null
@@ -90,10 +95,33 @@ export default function BuyerOrderDetailScreen() {
   }, [id])
 
   useFocusEffect(
-  useCallback(() => {
-    if (id) loadOrder()
-  }, [id])
-)
+    useCallback(() => {
+      if (id) loadOrder()
+    }, [id])
+  )
+
+  // 🔥 EASYPOST TRIGGER
+  useEffect(() => {
+    if (order?.id && order?.tracking_url) {
+      fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/check-tracking`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ orderId: order.id }),
+        }
+      )
+        .then(() => {
+          setTimeout(() => {
+            loadOrder()
+          }, 1500)
+        })
+        .catch(() => {})
+    }
+  }, [order?.id])
 
   const loadOrder = async () => {
     try {
@@ -113,15 +141,15 @@ export default function BuyerOrderDetailScreen() {
         .from("orders")
         .select(`
           id,
-          public_order_number, 
+          public_order_number,
           buyer_id,
           seller_id,
           status,
-          quantity, 
+          quantity,
           amount_cents,
           item_price_cents,
           shipping_amount_cents,
-          tax_cents, 
+          tax_cents,
           buyer_fee_cents,
           image_url,
           tracking_url,
@@ -129,6 +157,8 @@ export default function BuyerOrderDetailScreen() {
           carrier,
           completed_at,
           is_disputed,
+          last_tracking_status,
+          delivered_at,
           listing_snapshot
         `)
         .eq("id", id)
@@ -156,7 +186,6 @@ export default function BuyerOrderDetailScreen() {
         .maybeSingle()
 
       setReturnAddress(addressData ?? null)
-
     } catch (err) {
       handleAppError(err, {
         fallbackMessage: "Unexpected error loading order details.",
@@ -167,151 +196,151 @@ export default function BuyerOrderDetailScreen() {
     }
   }
 
- /* ---------------- ACTIONS ---------------- */
+  /* ---------------- ACTIONS ---------------- */
 
-const confirmDelivery = async () => {
-  if (!order || processing) return
+  const confirmDelivery = async () => {
+    if (!order || processing) return
 
-  setProcessing(true)
+    setProcessing(true)
 
-  // Execute payout + completion flow via Edge Function
-  const { error } = await supabase.functions.invoke("execute-stripe-payout", {
-    body: {
-      order_id: order.id,
-      user_id: order.buyer_id,
-    },
-  })
-
-  if (error) {
-    handleAppError(error, {
-      fallbackMessage:
-        "Unable to release funds right now. Please try again shortly.",
+    // Execute payout + completion flow via Edge Function
+    const { error } = await supabase.functions.invoke("execute-stripe-payout", {
+      body: {
+        order_id: order.id,
+        user_id: order.buyer_id,
+      },
     })
+
+    if (error) {
+      handleAppError(error, {
+        fallbackMessage:
+          "Unable to release funds right now. Please try again shortly.",
+      })
+      setProcessing(false)
+      return
+    }
+
+    setConfirmVisible(false)
     setProcessing(false)
-    return
+
+    await notify({
+      userId: order.seller_id,
+      type: "order",
+      title: "Order completed",
+      body: "The buyer confirmed delivery. Funds have been released.",
+      data: {
+        route: "/seller-hub/orders/[id]",
+        params: { id: order.id },
+      },
+    })
+
+    router.replace("/buyer-hub/orders/completed")
   }
 
-  setConfirmVisible(false)
-  setProcessing(false)
+  const cancelOrder = async () => {
+    if (!order || processing) return
 
-  await notify({
-    userId: order.seller_id,
-    type: "order",
-    title: "Order completed",
-    body: "The buyer confirmed delivery. Funds have been released.",
-    data: {
-      route: "/seller-hub/orders/[id]",
-      params: { id: order.id },
-    },
-  })
+    Alert.alert(
+      "Cancel Order?",
+      "Are you sure you want to cancel this order? This will refund your payment. Fees are non-refundable.",
+      [
+        { text: "Go Back", style: "cancel" },
+        {
+          text: "Yes, Cancel Order",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setProcessing(true)
 
-  router.replace("/buyer-hub/orders/completed")
-}
-
-const cancelOrder = async () => {
-  if (!order || processing) return
-
-  Alert.alert(
-    "Cancel Order?",
-    "Are you sure you want to cancel this order? This will refund your payment. Fees are non-refundable.",
-    [
-      { text: "Go Back", style: "cancel" },
-      {
-        text: "Yes, Cancel Order",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            setProcessing(true)
-
-            const { error } = await supabase.functions.invoke(
-              "cancel-order-refund",
-              {
-                body: {
-                  order_id: order.id,
-                },
-              }
-            )
-
-            if (error) {
-              Alert.alert(
-                "Cancellation Failed",
-                error.message ?? "Unable to cancel this order."
+              const { error } = await supabase.functions.invoke(
+                "cancel-order-refund",
+                {
+                  body: {
+                    order_id: order.id,
+                  },
+                }
               )
-              setProcessing(false)
-              return
-            }
 
-            Alert.alert(
-              "Order Cancelled",
-              "Your order has been cancelled and refunded."
-            )
-
-            await loadOrder()
-            setProcessing(false)
-          } catch (err) {
-            handleAppError(err, {
-              fallbackMessage:
-                "Something went wrong cancelling your order.",
-            })
-            setProcessing(false)
-          }
-        },
-      },
-    ]
-  )
-}
-
-const cancelReturn = async () => {
-  if (!order || processing) return
-
-  Alert.alert(
-    "Cancel Return?",
-    "Are you sure you want to cancel the return? This will complete the order and can't be undone.",
-    [
-      { text: "Go Back", style: "cancel" },
-      {
-        text: "Yes, Cancel Return",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            setProcessing(true)
-
-            const { error } = await supabase.functions.invoke(
-              "cancel-return-complete-order",
-              {
-                body: {
-                  order_id: order.id,
-                },
+              if (error) {
+                Alert.alert(
+                  "Cancellation Failed",
+                  error.message ?? "Unable to cancel this order."
+                )
+                setProcessing(false)
+                return
               }
-            )
 
-            if (error) {
-              handleAppError(error, {
-                fallbackMessage: "Failed to cancel the return.",
+              Alert.alert(
+                "Order Cancelled",
+                "Your order has been cancelled and refunded."
+              )
+
+              await loadOrder()
+              setProcessing(false)
+            } catch (err) {
+              handleAppError(err, {
+                fallbackMessage:
+                  "Something went wrong cancelling your order.",
               })
               setProcessing(false)
-              return
             }
-
-            Alert.alert(
-              "Return Cancelled",
-              "The return has been cancelled and the order is now completed."
-            )
-
-            await loadOrder()
-            setProcessing(false)
-          } catch (err) {
-            handleAppError(err, {
-              fallbackMessage:
-                "Something went wrong cancelling the return.",
-            })
-            setProcessing(false)
-          }
+          },
         },
-      },
-    ]
-  )
-}
+      ]
+    )
+  }
+
+  const cancelReturn = async () => {
+    if (!order || processing) return
+
+    Alert.alert(
+      "Cancel Return?",
+      "Are you sure you want to cancel the return? This will complete the order and can't be undone.",
+      [
+        { text: "Go Back", style: "cancel" },
+        {
+          text: "Yes, Cancel Return",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setProcessing(true)
+
+              const { error } = await supabase.functions.invoke(
+                "cancel-return-complete-order",
+                {
+                  body: {
+                    order_id: order.id,
+                  },
+                }
+              )
+
+              if (error) {
+                handleAppError(error, {
+                  fallbackMessage: "Failed to cancel the return.",
+                })
+                setProcessing(false)
+                return
+              }
+
+              Alert.alert(
+                "Return Cancelled",
+                "The return has been cancelled and the order is now completed."
+              )
+
+              await loadOrder()
+              setProcessing(false)
+            } catch (err) {
+              handleAppError(err, {
+                fallbackMessage:
+                  "Something went wrong cancelling the return.",
+              })
+              setProcessing(false)
+            }
+          },
+        },
+      ]
+    )
+  }
 
   if (loading || !order) {
     return <ActivityIndicator style={{ marginTop: 60 }} />
@@ -325,7 +354,12 @@ const cancelReturn = async () => {
   const isCompleted = order.status === "completed"
   const isReturnStarted = order.status === "return_started"
   const isReturnProcessing = order.status === "return_processing"
-  const isShipped = order.status === "shipped"
+
+  const isShipped =
+    order.status === "shipped" ||
+    order.status === "in_transit" ||
+    order.status === "delivered"
+
   const isPaid = order.status === "paid"
 
   const isInReturnFlow = isReturnStarted || isReturnProcessing
@@ -370,25 +404,25 @@ const cancelReturn = async () => {
     ? order.return_tracking_url
     : order.tracking_url
 
-    const quantity = order.quantity ?? 1
+  const quantity = order.quantity ?? 1
 
-// item price stored as total for quantity
-const itemTotal = (order.item_price_cents ?? 0) / 100
+  // item price stored as total for quantity
+  const itemTotal = (order.item_price_cents ?? 0) / 100
 
-// calculate unit price for receipt display
-const itemUnitPrice = quantity > 0 ? itemTotal / quantity : itemTotal
+  // calculate unit price for receipt display
+  const itemUnitPrice = quantity > 0 ? itemTotal / quantity : itemTotal
 
-const shipping = (order.shipping_amount_cents ?? 0) / 100
-const tax = (order.tax_cents ?? 0) / 100
+  const shipping = (order.shipping_amount_cents ?? 0) / 100
+  const tax = (order.tax_cents ?? 0) / 100
 
-// buyer protection + processing fee
-const buyerFee = (order.buyer_fee_cents ?? 0) / 100
+  // buyer protection + processing fee
+  const buyerFee = (order.buyer_fee_cents ?? 0) / 100
 
-// ✅ actual total the buyer paid
-const totalPaid = (order.amount_cents ?? 0) / 100
+  // ✅ actual total the buyer paid
+  const totalPaid = (order.amount_cents ?? 0) / 100
 
-// ✅ refund excludes buyer protection fee
-const refundAmount = Math.max(0, totalPaid - buyerFee)
+  // ✅ refund excludes buyer protection fee
+  const refundAmount = Math.max(0, totalPaid - buyerFee)
 
   return (
     <View style={styles.screen}>
@@ -411,19 +445,61 @@ const refundAmount = Math.max(0, totalPaid - buyerFee)
         )}
 
         <View style={styles.content}>
-          {!isInReturnFlow && (
-  <BuyerReceiptCard
-  itemPrice={itemUnitPrice}
-  quantity={quantity}
-  shipping={shipping}
-  tax={tax}
-  buyerFee={buyerFee}
-  totalPaid={totalPaid} // ✅ pass the real total paid
-  status={order.status}
-/>
-)}
+          {/* 📊 TRACKING STATUS BADGE */}
+          {order.tracking_url && isShipped && !isInReturnFlow && !isCompleted && (
+            <View
+              style={{
+                backgroundColor:
+                  order.status === "delivered"
+                    ? "#E6F4EA"
+                    : order.status === "in_transit"
+                    ? "#E8F1FF"
+                    : "#F5F5F5",
+                padding: 10,
+                borderRadius: 10,
+                marginBottom: 10,
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{
+                  fontWeight: "600",
+                  color:
+                    order.status === "delivered"
+                      ? "#1E7E34"
+                      : order.status === "in_transit"
+                      ? "#1A73E8"
+                      : "#666",
+                }}
+              >
+                {order.status === "delivered"
+                  ? "✅ Delivered"
+                  : order.status === "in_transit"
+                  ? "🚚 In Transit"
+                  : "⏳ Shipped"}
+              </Text>
 
-          {/* 🔥 ONLY ADDITION: DISPUTE LOCK + SEE DISPUTE BUTTON */}
+              {order.delivered_at && (
+                <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                  Delivered on{" "}
+                  {new Date(order.delivered_at).toLocaleDateString()}
+                </Text>
+              )}
+            </View>
+          )}
+
+          {!isInReturnFlow && (
+            <BuyerReceiptCard
+              itemPrice={itemUnitPrice}
+              quantity={quantity}
+              shipping={shipping}
+              tax={tax}
+              buyerFee={buyerFee}
+              totalPaid={totalPaid}
+              status={order.status}
+            />
+          )}
+
           <OrderActionButtons
             showTrack={canTrack}
             showConfirmDelivery={!isCompleted && canConfirmDelivery}
@@ -444,7 +520,7 @@ const refundAmount = Math.max(0, totalPaid - buyerFee)
             }
             showCancelOrder={!isCompleted && canCancel}
             showDispute={canDispute}
-            showSeeDispute={isDisputed} // 🔥 NEW
+            showSeeDispute={isDisputed}
             trackingUrl={activeTrackingUrl}
             processing={processing}
             onConfirmDelivery={() => setConfirmVisible(true)}
@@ -470,7 +546,7 @@ const refundAmount = Math.max(0, totalPaid - buyerFee)
             }
             onSeeDispute={() =>
               router.push(`/buyer-hub/orders/disputes/${order.id}`)
-            } // 🔥 NEW
+            }
           />
         </View>
       </ScrollView>

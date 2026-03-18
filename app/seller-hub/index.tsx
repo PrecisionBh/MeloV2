@@ -1,7 +1,13 @@
 import { Ionicons } from "@expo/vector-icons"
 import { useFocusEffect, useRouter } from "expo-router"
 import { useCallback, useState } from "react"
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native"
 
 import AppHeader from "@/components/app-header"
 import UpgradeToProButton from "@/components/pro/UpgradeToProButton"
@@ -27,76 +33,21 @@ export default function SellerHubScreen() {
   const [boostsRemaining, setBoostsRemaining] = useState<number>(0)
   const [megaBoostsRemaining, setMegaBoostsRemaining] = useState<number>(0)
 
-/* ---------------- LOAD COUNTS ---------------- */
+  /* ---------------- LOAD COUNTS ---------------- */
 
-useFocusEffect(
-  useCallback(() => {
-    if (!sellerId) return
+  useFocusEffect(
+    useCallback(() => {
+      if (!sellerId) return
 
-    console.log("🔄 SellerHub focused — refreshing everything")
+      console.log("🔄 SellerHub focused — refreshing dashboard")
 
-    // 🔥 Fire escrow/return triggers (non-blocking)
-   ;(async () => {
-  try {
-    const base = process.env.EXPO_PUBLIC_SUPABASE_URL
-
-    console.log("🔥 Triggering escrow auto release")
-
-    const escrowRes = await fetch(`${base}/functions/v1/auto-release-escrow`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-cron-secret": "Auto_Release_Escrow_2026",
-      },
-    })
-
-    console.log("Escrow release status:", escrowRes.status)
-    console.log("Escrow release response:", await escrowRes.text())
-
-    console.log("🔁 Triggering return auto refund")
-
-    const returnRes = await fetch(`${base}/functions/v1/auto-release-return`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-cron-secret": "Auto_Release_Escrow_2026",
-      },
-    })
-
-    console.log("Return auto refund status:", returnRes.status)
-    console.log("Return auto refund response:", await returnRes.text())
-
-    console.log("⏱️ Triggering non-return escrow release")
-
-    const nonReturnRes = await fetch(
-      `${base}/functions/v1/auto-non-return-release`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-cron-secret": "Auto_Release_Escrow_2026",
-        },
-      }
-    )
-
-    console.log("Non-return release status:", nonReturnRes.status)
-    console.log("Non-return release response:", await nonReturnRes.text())
-  } catch (err) {
-    console.log("⚠ Escrow trigger error:", err)
-  }
-})()
-
-    // 🔥 CRITICAL: Reload Pro status (this updates boostsRemaining)
-    loadProStatus()
-
-    // Other dashboard loads
-    loadOrdersToShipCount()
-    loadOrdersInProgressCount()
-    loadUnreadMessagesCount()
-    loadOffersActionCount()
-
-  }, [sellerId])
-)
+      loadProStatus()
+      loadOrdersToShipCount()
+      loadOrdersInProgressCount()
+      loadUnreadMessagesCount()
+      loadOffersActionCount()
+    }, [sellerId])
+  )
 
   const loadProStatus = async () => {
     if (!sellerId) return
@@ -159,7 +110,12 @@ useFocusEffect(
         .from("orders")
         .select("id", { count: "exact", head: true })
         .eq("seller_id", sellerId)
-        .in("status", ["shipped", "in_transit"])
+        .or(`
+          tracking_status.eq.label_created,
+          tracking_status.eq.in_transit,
+          status.eq.return_started,
+          status.eq.return_processing
+        `)
 
       setOrdersInProgressCount(count ?? 0)
     } catch (err) {
@@ -243,12 +199,12 @@ useFocusEffect(
 
         <View style={styles.proWrap}>
           <ProDashboardSection
-  userId={sellerId || ""}
-  boostsRemaining={boostsRemaining}
-  megaBoostsRemaining={megaBoostsRemaining}
-  lastBoostReset={null}
-  isPro={isPro}
-/>
+            userId={sellerId || ""}
+            boostsRemaining={boostsRemaining}
+            megaBoostsRemaining={megaBoostsRemaining}
+            lastBoostReset={null}
+            isPro={isPro}
+          />
         </View>
       </ScrollView>
 

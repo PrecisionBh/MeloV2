@@ -7,8 +7,7 @@ import {
   Linking,
   ScrollView,
   StyleSheet,
-  Text,
-  TouchableOpacity,
+  Text, TextInput, TouchableOpacity,
   View
 } from "react-native"
 
@@ -27,6 +26,8 @@ import SellerOrderHeaderCard from "@/components/seller-hub/orders/SellerOrderHea
 type OrderStatus =
   | "paid"
   | "shipped"
+  | "in_transit"
+  | "delivered"
   | "return_started"
   | "return_processing"
   | "completed"
@@ -114,6 +115,28 @@ export default function SellerOrderDetailScreen() {
   useEffect(() => {
     if (id) loadOrder()
   }, [id])
+
+  useEffect(() => {
+  if (order?.id && order?.tracking_number) {
+    fetch(
+      `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/check-tracking`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ orderId: order.id }),
+      }
+    )
+      .then(() => {
+        setTimeout(() => {
+          loadOrder()
+        }, 1500)
+      })
+      .catch(() => {})
+  }
+}, [order?.id])
 
   const loadOrder = async () => {
     try {
@@ -213,14 +236,11 @@ const submitTracking = async () => {
   try {
     setSaving(true)
 
-    const trackingUrl = buildTrackingUrl(carrier, tracking)
-
     const { error } = await supabase
       .from("orders")
       .update({
         carrier,
         tracking_number: tracking,
-        tracking_url: trackingUrl,
         status: "shipped",
         shipped_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -318,7 +338,10 @@ if (!order) return null
 /* ---------------- STATE ---------------- */
 
 const isPaid = order.status === "paid"
-const isShipped = order.status === "shipped"
+const isShipped =
+  order.status === "shipped" ||
+  order.status === "in_transit" ||
+  order.status === "delivered"
 const isCompleted = order.status === "completed"
 const isReturnStarted = order.status === "return_started"
 const isReturnProcessing = order.status === "return_processing"
@@ -365,7 +388,7 @@ const totalPaid = (order.amount_cents ?? 0) / 100
 
 /* ---------------- ACTION FLAGS ---------------- */
 
-// 🚨 detect any tracking (manual OR label-based)
+// 🚨 detect any tracking (manual only now)
 const hasTracking =
   !!order.tracking_url || !!order.tracking_number
 
@@ -379,18 +402,7 @@ const activeTrackingUrl =
 // 🟢 ONLY show add tracking if NOTHING exists yet
 const showAddTracking =
   isPaid &&
-  !order.shipping_label_purchased &&
   !hasTracking &&
-  !isInReturnFlow &&
-  !isCompleted
-
-// label creation follows same rule
-const showCreateLabel = showAddTracking
-
-// 🔵 show label if purchased
-const showViewLabel =
-  !!order.shipping_label_purchased &&
-  !!order.label_url &&
   !isInReturnFlow &&
   !isCompleted
 
@@ -463,97 +475,110 @@ return (
 
     <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
       <SellerOrderHeaderCard
-        imageUrl={order.image_url}
-        orderId={order.public_order_number ?? order.id}
-        title={order.title}
-        status={order.status}
-        isDisputed={isReturnProcessing}
-        hasReturnTracking={hasReturnTracking}
-      />
+  imageUrl={order.image_url}
+  orderId={order.public_order_number ?? order.id}
+  title={order.title}
+  status={order.status}
+  tracking_status={order.tracking_status}   // ✅ THIS IS THE FIX
+  isDisputed={isReturnProcessing}
+  hasReturnTracking={hasReturnTracking}
+/>
 
       {showShippingAddress && !isRefunded && !isCancelled && (
         <BuyerShippingAddressCard address={order} />
       )}
 
-      <View style={styles.content}>
-        {/* 🟢 PRE-LABEL FLOW */}
-        {showAddTracking && !isRefunded && !isCancelled && (
-          <>
-            {showCreateLabel && (
-              <TouchableOpacity
-                style={{
-                  backgroundColor: "#7FAF9B",
-                  padding: 14,
-                  borderRadius: 12,
-                  alignItems: "center",
-                  marginBottom: 12,
-                }}
-                onPress={() =>
-                  router.push(`/seller-hub/shipping?orderId=${String(order.id)}` as any)
-                }
-              >
-                <Text style={{ color: "#fff", fontWeight: "600" }}>
-                  📦 Create Shipping Label
-                </Text>
-              </TouchableOpacity>
-            )}
+     <View style={styles.content}>
 
-            {/* ⛔ tracking UI ONLY shows when NO label + NO tracking */}
-          </>
-        )}
-
-        {/* 🔵 POST-LABEL FLOW */}
-        {showViewLabel && !isRefunded && !isCancelled && (
-          <TouchableOpacity
-            style={{
-              backgroundColor: "#1E1E1E",
-              padding: 14,
-              borderRadius: 12,
-              alignItems: "center",
-              marginBottom: 12,
-            }}
-            onPress={() =>
-              router.push({
-                pathname: "/seller-hub/orders/label",
-                params: { id: order.id },
-              })
-            }
+  {/* 🟢 ADD TRACKING FLOW */}
+  {showAddTracking && !isRefunded && !isCancelled && (
+    <>
+     {/* 🟢 ADD TRACKING FLOW */}
+{showAddTracking && !isRefunded && !isCancelled && (
+  <View style={styles.trackingCard}>
+    
+    <Text style={styles.label}>Select Carrier</Text>
+    <View style={styles.carrierRow}>
+      {["USPS", "UPS", "FedEx", "DHL"].map((c) => (
+        <TouchableOpacity
+          key={c}
+          style={[
+            styles.carrierPill,
+            carrier === c && styles.carrierPillActive,
+          ]}
+          onPress={() => setCarrier(c)}
+        >
+          <Text
+            style={[
+              styles.carrierText,
+              carrier === c && styles.carrierTextActive,
+            ]}
           >
-            <Text style={{ color: "#fff", fontWeight: "600" }}>
-              📄 View Shipping Label
-            </Text>
-          </TouchableOpacity>
-        )}
+            {c}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
 
-        {/* 📍 TRACK PACKAGE */}
-        {showTrackShipment && !isRefunded && !isCancelled && (
-          <TouchableOpacity
-            style={{
-              backgroundColor: "#000",
-              padding: 14,
-              borderRadius: 12,
-              alignItems: "center",
-              marginBottom: 12,
-            }}
-            onPress={async () => {
-              if (!activeTrackingUrl) {
-                Alert.alert("Tracking not available yet")
-                return
-              }
+    <View style={styles.field}>
+      <Text style={styles.label}>Tracking Number</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Enter tracking number"
+        value={tracking}
+        onChangeText={setTracking}
+      />
+    </View>
 
-              try {
-                await Linking.openURL(activeTrackingUrl)
-              } catch (err) {
-                Alert.alert("Unable to open tracking link")
-              }
-            }}
-          >
-            <Text style={{ color: "#fff", fontWeight: "600" }}>
-              📍 Track Package
-            </Text>
-          </TouchableOpacity>
-        )}
+    <TouchableOpacity
+      style={{
+        backgroundColor: "#000",
+        padding: 14,
+        borderRadius: 12,
+        alignItems: "center",
+        marginTop: 16,
+        opacity: saving ? 0.6 : 1,
+      }}
+      disabled={saving}
+      onPress={submitTracking}
+    >
+      <Text style={{ color: "#fff", fontWeight: "600" }}>
+        {saving ? "Saving..." : "Mark as Shipped"}
+      </Text>
+    </TouchableOpacity>
+  </View>
+)}
+    </>
+  )}
 
+  {/* 📍 TRACK PACKAGE */}
+  {showTrackShipment && !isRefunded && !isCancelled && (
+    <TouchableOpacity
+      style={{
+        backgroundColor: "#000",
+        padding: 14,
+        borderRadius: 12,
+        alignItems: "center",
+        marginBottom: 12,
+      }}
+      onPress={async () => {
+        if (!activeTrackingUrl) {
+          Alert.alert("Tracking not available yet")
+          return
+        }
+
+        try {
+          await Linking.openURL(activeTrackingUrl)
+        } catch (err) {
+          Alert.alert("Unable to open tracking link")
+        }
+      }}
+    >
+      <Text style={{ color: "#fff", fontWeight: "600" }}>
+        📍 Track Package
+      </Text>
+    </TouchableOpacity>
+  )}
         {/* RECEIPT + ACTIONS unchanged */}
       </View>
     </ScrollView>
