@@ -3,38 +3,69 @@ import { StyleSheet, Text, View } from "react-native"
 type Props = {
   status?: string | null
   deliveredAt?: string | null
+  isReturn?: boolean // 🔥 NEW
 }
 
 export default function BuyerTrackingCard({
   status,
   deliveredAt,
+  isReturn = false,
 }: Props) {
   const getMessage = () => {
-    switch (status) {
-      case "shipped":
-        return {
-          title: "Shipment Started",
-          message:
-            "The seller has shipped your order and it is on the way.",
-        }
+    /* ================= NORMAL SHIPPING ================= */
 
-      case "in_transit":
-        return {
-          title: "In Transit",
-          message:
-            "Your order is currently on the way to you.",
-        }
+    if (!isReturn) {
+      switch (status) {
+        case "shipped":
+          return {
+            title: "Shipment Started",
+            message:
+              "The seller has shipped your order and it is on the way.",
+          }
 
-      case "delivered":
-        return {
-          title: "Delivered",
-          message:
-            "Your order has been delivered. You have 2 days to report any issues before the order is completed automatically.",
-        }
+        case "in_transit":
+          return {
+            title: "In Transit",
+            message:
+              "Your order is currently on the way to you.",
+          }
 
-      default:
-        return null
+        case "delivered":
+          return {
+            title: "Delivered",
+            message:
+              "Your order has been delivered. You have 2 days to report any issues before the order is completed automatically.",
+          }
+
+        default:
+          return null
+      }
     }
+
+    /* ================= RETURN FLOW ================= */
+
+    if (isReturn) {
+      switch (status) {
+        case "in_transit":
+          return {
+            title: "Return In Transit",
+            message:
+              "Your return is on the way back to the seller.",
+          }
+
+        case "delivered":
+          return {
+            title: "Return Delivered",
+            message:
+              "Your return has been delivered. The seller has 2 days to complete the return before your refund is automatically processed.",
+          }
+
+        default:
+          return null
+      }
+    }
+
+    return null
   }
 
   const data = getMessage()
@@ -49,7 +80,7 @@ export default function BuyerTrackingCard({
 
       {status === "delivered" && deliveredAt && (
         <Text style={styles.date}>
-          Delivered on{" "}
+          {isReturn ? "Return delivered on " : "Delivered on "}
           {new Date(deliveredAt).toLocaleDateString()}
         </Text>
       )}

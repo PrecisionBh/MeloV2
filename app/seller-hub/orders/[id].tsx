@@ -79,6 +79,7 @@ type Order = {
   return_shipped_at: string | null
   return_deadline: string | null
   return_received: boolean | null
+  return_tracking_status: string | null
 }
 
 /* ---------------- HELPERS ---------------- */
@@ -363,6 +364,9 @@ const showShippingAddress =
   !isCompleted &&
   !isRefunded
 
+  const isReturnTrackingActive =
+  isInReturnFlow && !!order.return_tracking_number
+
 /* ---------------- MONEY ---------------- */
 
 const quantity = order.quantity ?? 1
@@ -382,7 +386,9 @@ const hasTracking =
   !!order.tracking_url || !!order.tracking_number
 
 // 🧠 unified tracking URL (same idea as buyer screen)
-const activeTrackingUrl = order.tracking_url ?? null
+const activeTrackingUrl = isInReturnFlow
+  ? order.return_tracking_url ?? null
+  : order.tracking_url ?? null
 
 // 🟢 ONLY show add tracking if NOTHING exists yet
 const showAddTracking =
@@ -458,121 +464,130 @@ return (
   <View style={styles.screen}>
     <AppHeader title="Order" backRoute="/seller-hub/orders" />
 
-  <ScrollView
-  contentContainerStyle={{ paddingBottom: 140 }}
-  nestedScrollEnabled
->
-     <SellerOrderHeaderCard
-  imageUrls={order.image_urls} // ✅ use this if available
-  imageUrl={order.image_url}   // fallback
-  orderId={order.public_order_number ?? order.id}
-  title={order.title}
-  status={order.status}
-  isDisputed={isReturnProcessing}
-  hasReturnTracking={hasReturnTracking}
-/>
+    <ScrollView
+      contentContainerStyle={{ paddingBottom: 140 }}
+      nestedScrollEnabled
+    >
+      <SellerOrderHeaderCard
+        imageUrls={order.image_urls}
+        imageUrl={order.image_url}
+        orderId={order.public_order_number ?? order.id}
+        title={order.title}
+        status={order.status}
+        isDisputed={isReturnProcessing}
+        hasReturnTracking={hasReturnTracking}
+      />
 
       {showShippingAddress && !isRefunded && !isCancelled && (
         <BuyerShippingAddressCard address={order} />
       )}
 
-     <View style={styles.content}>
+      <View style={styles.content}>
+        {/* 🟢 ADD TRACKING FLOW */}
+        {showAddTracking && !isRefunded && !isCancelled && (
+          <View style={styles.trackingCard}>
+            <Text style={styles.label}>Select Carrier</Text>
+            <View style={styles.carrierRow}>
+              {["USPS", "UPS", "FedEx", "DHL"].map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  style={[
+                    styles.carrierPill,
+                    carrier === c && styles.carrierPillActive,
+                  ]}
+                  onPress={() => setCarrier(c)}
+                >
+                  <Text
+                    style={[
+                      styles.carrierText,
+                      carrier === c && styles.carrierTextActive,
+                    ]}
+                  >
+                    {c}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-  {/* 🟢 ADD TRACKING FLOW */}
-  {showAddTracking && !isRefunded && !isCancelled && (
-    <>
-     {/* 🟢 ADD TRACKING FLOW */}
-{showAddTracking && !isRefunded && !isCancelled && (
-  <View style={styles.trackingCard}>
-    
-    <Text style={styles.label}>Select Carrier</Text>
-    <View style={styles.carrierRow}>
-      {["USPS", "UPS", "FedEx", "DHL"].map((c) => (
-        <TouchableOpacity
-          key={c}
-          style={[
-            styles.carrierPill,
-            carrier === c && styles.carrierPillActive,
-          ]}
-          onPress={() => setCarrier(c)}
-        >
-          <Text
-            style={[
-              styles.carrierText,
-              carrier === c && styles.carrierTextActive,
-            ]}
-          >
-            {c}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
+            <View style={styles.field}>
+              <Text style={styles.label}>Tracking Number</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter tracking number"
+                value={tracking}
+                onChangeText={setTracking}
+              />
+            </View>
 
-    <View style={styles.field}>
-      <Text style={styles.label}>Tracking Number</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter tracking number"
-        value={tracking}
-        onChangeText={setTracking}
-      />
-    </View>
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#000",
+                padding: 14,
+                borderRadius: 12,
+                alignItems: "center",
+                marginTop: 16,
+                opacity: saving ? 0.6 : 1,
+              }}
+              disabled={saving}
+              onPress={submitTracking}
+            >
+              <Text style={{ color: "#fff", fontWeight: "600" }}>
+                {saving ? "Saving..." : "Mark as Shipped"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-    <TouchableOpacity
-      style={{
-        backgroundColor: "#000",
-        padding: 14,
-        borderRadius: 12,
-        alignItems: "center",
-        marginTop: 16,
-        opacity: saving ? 0.6 : 1,
-      }}
-      disabled={saving}
-      onPress={submitTracking}
-    >
-      <Text style={{ color: "#fff", fontWeight: "600" }}>
-        {saving ? "Saving..." : "Mark as Shipped"}
-      </Text>
-    </TouchableOpacity>
-  </View>
-)}
-    </>
-  )}
+        {/* 📦 TRACKING STATUS CARD (FORWARD) */}
+        {showTrackShipment &&
+          !isRefunded &&
+          !isCancelled &&
+          !isInReturnFlow && (
+            <SellerTrackingCard tracking_status={order.tracking_status} />
+          )}
 
-  {/* 📦 TRACKING STATUS CARD */}
-{showTrackShipment && !isRefunded && !isCancelled && (
-  <SellerTrackingCard tracking_status={order.tracking_status} />
-)}
+        {/* 🔁 RETURN TRACKING CARD */}
+        {isReturnTrackingActive &&
+          !isRefunded &&
+          !isCancelled && (
+            <SellerTrackingCard
+              tracking_status={order.return_tracking_status}
+              isReturn
+            />
+          )}
 
-{/* 📍 TRACK PACKAGE */}
-{showTrackShipment && !isRefunded && !isCancelled && (
-  <TouchableOpacity
-    style={{
-      backgroundColor: "#000",
-      padding: 14,
-      borderRadius: 12,
-      alignItems: "center",
-       marginTop: 12,
-      marginBottom: 12,
-    }}
-    onPress={async () => {
-      if (!activeTrackingUrl) {
-        Alert.alert("Tracking not available yet")
-        return
-      }
+        {/* 📍 TRACK PACKAGE */}
+        {(showTrackShipment || isReturnTrackingActive) &&
+          !isRefunded &&
+          !isCancelled && (
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#000",
+                padding: 14,
+                borderRadius: 12,
+                alignItems: "center",
+                marginTop: 12,
+                marginBottom: 12,
+              }}
+              onPress={async () => {
+                if (!activeTrackingUrl) {
+                  Alert.alert("Tracking not available yet")
+                  return
+                }
 
-      try {
-        await Linking.openURL(activeTrackingUrl)
-      } catch (err) {
-        Alert.alert("Unable to open tracking link")
-      }
-    }}
-  >
-    <Text style={{ color: "#fff", fontWeight: "600" }}>
-      📍 Track Package
-    </Text>
-  </TouchableOpacity>
-)}
+                try {
+                  await Linking.openURL(activeTrackingUrl)
+                } catch (err) {
+                  Alert.alert("Unable to open tracking link")
+                }
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "600" }}>
+                📍 Track Package
+              </Text>
+            </TouchableOpacity>
+          )}
+
         {/* RECEIPT + ACTIONS unchanged */}
       </View>
     </ScrollView>
@@ -585,6 +600,7 @@ return (
     />
   </View>
 )
+
 }
 const styles = StyleSheet.create({
   screen: {
@@ -646,25 +662,24 @@ const styles = StyleSheet.create({
   },
 
   quantityCard: {
-  backgroundColor: "#FFF4E5",
-  borderRadius: 12,
-  padding: 12,
-  marginBottom: 10,
-  borderWidth: 1,
-  borderColor: "#F2C97D",
-},
+    backgroundColor: "#FFF4E5",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#F2C97D",
+  },
 
-quantityTitle: {
-  fontSize: 14,
-  fontWeight: "700",
-  color: "#7A4B00",
-  marginBottom: 4,
-},
+  quantityTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#7A4B00",
+    marginBottom: 4,
+  },
 
-quantityText: {
-  fontSize: 15,
-  fontWeight: "600",
-  color: "#7A4B00",
-},
-
+  quantityText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#7A4B00",
+  },
 })
