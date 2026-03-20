@@ -15,12 +15,12 @@ const supabase = createClient(
 )
 
 const PRICE_MAP: Record<string, string> = {
-  boost_3: "price_1T6x1YDrYUL6FG4RumR5Izao",
-  boost_10: "price_1T6x2YDrYUL6FG4Rd9Z85R68",
-  boost_25: "price_1T6x3UDrYUL6FG4RORFI5ol4",
-  mega_1: "price_1T6x5EDrYUL6FG4Rz8o5tlV9",
-  mega_3: "price_1T6x69DrYUL6FG4RzMGq1zmS",
-  mega_8: "price_1T6x7UDrYUL6FG4RRnLN5D4h",
+  boost_3: "price_1TBlobDaisGHVOvP55rcOXmZ",
+  boost_10: "price_1TBlobDaisGHVOvPsuDCQW9e",
+  boost_25: "price_1TBlodDaisGHVOvP7CrM4Iba",
+  mega_1: "price_1TBlodDaisGHVOvPWyNq9D3l",
+  mega_3: "price_1TBlobDaisGHVOvPUx0Kx0QI",
+  mega_8: "price_1TBlobDaisGHVOvPr7nhCVlj",
 }
 
 Deno.serve(async (req) => {
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Fetch profile including Stripe customer ID
+    // 🔍 Fetch profile
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("id, stripe_customer_id, email")
@@ -74,9 +74,20 @@ Deno.serve(async (req) => {
 
     let customerId = profile.stripe_customer_id
 
-    // If somehow missing, create Stripe customer
+    // 🔥 STEP 1: Validate existing customer (FIXES YOUR ERROR)
+    if (customerId) {
+      try {
+        await stripe.customers.retrieve(customerId)
+        console.log("✅ Existing Stripe customer is valid:", customerId)
+      } catch (err: any) {
+        console.log("⚠ Invalid Stripe customer, will recreate:", customerId)
+        customerId = null
+      }
+    }
+
+    // 🔥 STEP 2: Create if missing OR invalid
     if (!customerId) {
-      console.log("⚠ No Stripe customer found, creating one...")
+      console.log("⚠ Creating new Stripe customer...")
 
       const customer = await stripe.customers.create({
         email: profile.email ?? undefined,
@@ -92,12 +103,13 @@ Deno.serve(async (req) => {
         .update({ stripe_customer_id: customerId })
         .eq("id", userId)
 
-      console.log("✅ Stripe customer created:", customerId)
+      console.log("✅ Stripe customer created + saved:", customerId)
     }
 
+    // 🔥 STEP 3: Create checkout session
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      customer: customerId, // 🔥 THIS FIXES YOUR ISSUE
+      customer: customerId,
       payment_method_types: ["card"],
       line_items: [
         {

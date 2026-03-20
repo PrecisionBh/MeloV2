@@ -1,8 +1,8 @@
 /// <reference lib="deno.ns" />
 
-import { serve } from "https://deno.land/std@0.203.0/http/server.ts"
+import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"; // 🧠 ADDED (resume guard)
-import Stripe from "https://esm.sh/stripe@13.11.0?target=deno"
+import Stripe from "https://esm.sh/stripe@13.11.0?target=deno";
 
 // ---------- ENV ----------
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY")
@@ -31,7 +31,7 @@ const supabase = createClient(
 )
 
 // 🔥 YOUR REAL MELO PRO PRICE ID
-const MELO_PRO_PRICE_ID = "price_1T6ZduDrYUL6FG4RJ3c63xU6"
+const MELO_PRO_PRICE_ID = "price_1TBlobDaisGHVOvP7oXcvd0I"
 
 // ---------- HANDLER ----------
 serve(async (req) => {
