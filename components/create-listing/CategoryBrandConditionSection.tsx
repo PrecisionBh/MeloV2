@@ -15,13 +15,22 @@ type Props = {
 /* 🔥 VALUE → LABEL FORMATTERS */
 
 const SPORT_LABEL_MAP: Record<string, string> = {
+  baseball: "Baseball",
   billiards: "Billiards",
-  golf: "Golf",
-  baseball_softball: "Baseball / Softball",
+  bowling: "Bowling",
+  boxing_mma: "Boxing / MMA",
   cornhole: "Cornhole",
   darts: "Darts",
   disc_golf: "Disc Golf",
-  bowling: "Bowling",
+  esports: "Esports / Gaming",
+  football: "Football",
+  golf: "Golf",
+  hockey: "Hockey",
+  skateboarding: "Skateboarding",
+  soccer: "Soccer",
+  softball: "Softball",
+  sports_cards: "Sports Cards",
+  tennis: "Tennis",
 }
 
 const CATEGORY_LABEL_MAP: Record<string, string> = {
@@ -46,10 +55,87 @@ const CATEGORY_LABEL_MAP: Record<string, string> = {
   golf_balls: "Golf Balls",
   golf_accessories: "Golf Accessories",
 
-  /* Baseball / Softball */
-  bats: "Bats",
-  cleats: "Cleats",
-  helmets: "Helmets",
+  /* Baseball */
+  baseball_bats: "Bats",
+  baseball_gloves: "Gloves",
+  baseball_cleats: "Cleats",
+  baseball_helmets: "Helmets",
+  baseball_apparel: "Apparel",
+  baseball_accessories: "Accessories",
+
+  /* Softball */
+  softball_bats: "Bats",
+  softball_gloves: "Gloves",
+  softball_cleats: "Cleats",
+  softball_helmets: "Helmets",
+  softball_apparel: "Apparel",
+  softball_accessories: "Accessories",
+
+  /* Basketball */
+  basketballs: "Basketballs",
+  basketball_shoes: "Shoes",
+  basketball_jerseys: "Jerseys",
+  basketball_shorts: "Shorts",
+  basketball_accessories: "Accessories",
+
+  /* Football */
+  football_helmets: "Helmets",
+  football_pads: "Pads",
+  football_gloves: "Gloves",
+  football_cleats: "Cleats",
+  football_jerseys: "Jerseys",
+
+  /* Soccer */
+  soccer_cleats: "Cleats",
+  soccer_balls: "Balls",
+  shin_guards: "Shin Guards",
+  soccer_jerseys: "Jerseys",
+  soccer_goalie: "Goalie Gear",
+
+  /* Hockey */
+  hockey_sticks: "Sticks",
+  hockey_skates: "Skates",
+  hockey_helmets: "Helmets",
+  hockey_pads: "Pads",
+  hockey_jerseys: "Jerseys",
+
+  /* Tennis */
+  tennis_rackets: "Rackets",
+  tennis_balls: "Balls",
+  tennis_shoes: "Shoes",
+  tennis_bags: "Bags",
+  tennis_accessories: "Accessories",
+
+  /* Boxing / MMA */
+  boxing_gloves: "Gloves",
+  hand_wraps: "Hand Wraps",
+  mma_gloves: "MMA Gloves",
+  punching_bags: "Punching Bags",
+  boxing_accessories: "Accessories",
+
+  /* Skateboarding */
+  decks: "Decks",
+  trucks: "Trucks",
+  wheels: "Wheels",
+  complete_boards: "Complete Boards",
+  skate_shoes: "Shoes",
+  skate_accessories: "Accessories",
+
+  /* Esports / Gaming */
+  controllers: "Controllers",
+  keyboards: "Keyboards",
+  mice: "Mice",
+  headsets: "Headsets",
+  gaming_chairs: "Chairs",
+  gaming_accessories: "Accessories",
+
+  /* Sports Cards */
+  graded_cards: "Graded Cards",
+  raw_cards: "Raw Cards",
+  sealed_boxes: "Sealed Boxes",
+  packs: "Packs",
+  card_supplies: "Supplies",
+  card_collectibles: "Collectibles",
 
   /* Cornhole */
   cornhole_bags: "Cornhole Bags",
@@ -134,28 +220,24 @@ export default function CategoryBrandConditionSection({
 
         <View style={styles.divider} />
 
-        {/* Sport Type */}
         <Field
           label="Sport *"
           value={formatSport(sportType)}
           onPress={onPressSportType}
         />
 
-        {/* Category */}
         <Field
           label="Category *"
           value={formatCategory(category)}
           onPress={onPressCategory}
         />
 
-        {/* Brand */}
         <Field
           label="Brand"
           value={formatBrand(brand)}
           onPress={onPressBrand}
         />
 
-        {/* Condition */}
         <Field
           label="Condition *"
           value={formatCondition(condition)}
@@ -196,12 +278,10 @@ const styles = StyleSheet.create({
     marginHorizontal: -16,
     backgroundColor: "#FFFFFF",
   },
-
   inner: {
     paddingTop: 18,
     paddingBottom: 6,
   },
-
   title: {
     fontSize: 16,
     fontWeight: "800",
@@ -209,21 +289,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 2,
   },
-
   subText: {
     fontSize: 12,
     color: "#323232",
     paddingHorizontal: 16,
     marginBottom: 14,
   },
-
   divider: {
     height: 1,
     backgroundColor: "#E6ECE8",
     width: "100%",
     marginBottom: 6,
   },
-
   field: {
     paddingVertical: 18,
     paddingHorizontal: 16,
@@ -233,14 +310,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   label: {
     fontSize: 12,
     color: "#6B6B6B",
     marginBottom: 2,
     fontWeight: "600",
   },
-
   value: {
     fontSize: 15,
     color: "#0F1E17",

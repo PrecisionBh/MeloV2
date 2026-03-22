@@ -3,12 +3,16 @@ import { useLocalSearchParams, useRouter } from "expo-router"
 import { useEffect, useState } from "react"
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native"
+
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import AppHeader from "@/components/app-header"
 import ShippingAddress from "@/components/checkout/shippingaddress"
@@ -58,6 +62,7 @@ type ListingForTotal = {
 /* ---------------- SCREEN ---------------- */
 
 export default function FinalPaymentScreen() {
+  const insets = useSafeAreaInsets()
   const router = useRouter()
   const { listingId, offerId, quantity } = useLocalSearchParams<{
     listingId?: string
@@ -467,7 +472,7 @@ if (session?.user?.id) {
     }
   }
 
- /* ---------------- RENDER ---------------- */
+/* ---------------- RENDER ---------------- */
 
 const isShippingComplete =
   name?.trim().length > 1 &&
@@ -486,70 +491,82 @@ return (
       }}
     />
 
-    <ScrollView contentContainerStyle={styles.content}>
-      <ShippingAddress
-        useSaved={useSaved}
-        setUseSaved={async (v) => {
-          // 🔁 TOGGLE ON → PRELOAD SAVED ADDRESS (DO NOT CLEAR)
-          if (v) {
-            if (hasSavedAddress) {
-              await loadSavedAddress()
-            }
-            setUseSaved(true)
-            return
-          }
-
-          // 🔁 TOGGLE OFF → CLEAR FOR NEW ADDRESS ENTRY
-          setUseSaved(false)
-          setName("")
-          setLine1("")
-          setLine2("")
-          setCity("")
-          setState("")
-          setPostal("")
-          setPhone("")
-          setSaveAsDefault(false) // 🔥 REQUIRED: new address should not auto-overwrite profile
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={90}
+    >
+      <ScrollView
+        contentContainerStyle={{
+          ...styles.content,
+          paddingBottom: insets.bottom + 140,
         }}
-        saveAsDefault={saveAsDefault}
-        setSaveAsDefault={setSaveAsDefault}
-        name={name}
-        setName={setName}
-        line1={line1}
-        setLine1={setLine1}
-        line2={line2}
-        setLine2={setLine2}
-        city={city}
-        setCity={setCity}
-        state={state}
-        setState={setState}
-        postal={postal}
-        setPostal={setPostal}
-        phone={phone}
-        setPhone={setPhone}
-        hasSavedAddress={hasSavedAddress}
-      />
-
-      <TouchableOpacity
-        style={[
-          styles.primaryBtn,
-          (!isShippingComplete || paying) && styles.primaryBtnDisabled,
-        ]}
-        onPress={payNow}
-        disabled={!isShippingComplete || paying}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.primaryText}>
-          {paying
-            ? "Processing..."
-            : displayTotalCents
-            ? `Pay Now • $${(displayTotalCents / 100).toFixed(2)}`
-            : "Pay Now"}
-        </Text>
-      </TouchableOpacity>
+        <ShippingAddress
+          useSaved={useSaved}
+          setUseSaved={async (v) => {
+            if (v) {
+              if (hasSavedAddress) {
+                await loadSavedAddress()
+              }
+              setUseSaved(true)
+              return
+            }
 
-      <Text style={styles.reassurance}>
-        Secure checkout powered by Stripe
-      </Text>
-    </ScrollView>
+            setUseSaved(false)
+            setName("")
+            setLine1("")
+            setLine2("")
+            setCity("")
+            setState("")
+            setPostal("")
+            setPhone("")
+            setSaveAsDefault(false)
+          }}
+          saveAsDefault={saveAsDefault}
+          setSaveAsDefault={setSaveAsDefault}
+          name={name}
+          setName={setName}
+          line1={line1}
+          setLine1={setLine1}
+          line2={line2}
+          setLine2={setLine2}
+          city={city}
+          setCity={setCity}
+          state={state}
+          setState={setState}
+          postal={postal}
+          setPostal={setPostal}
+          phone={phone}
+          setPhone={setPhone}
+          hasSavedAddress={hasSavedAddress}
+        />
+
+        <TouchableOpacity
+          style={[
+            styles.primaryBtn,
+            (!isShippingComplete || paying) && styles.primaryBtnDisabled,
+          ]}
+          onPress={payNow}
+          disabled={!isShippingComplete || paying}
+        >
+          <Text style={styles.primaryText}>
+            {paying
+              ? "Processing..."
+              : displayTotalCents
+              ? `Pay Now • $${(displayTotalCents / 100).toFixed(2)}`
+              : "Pay Now"}
+          </Text>
+        </TouchableOpacity>
+
+        <Text style={styles.reassurance}>
+          Secure checkout powered by Stripe
+        </Text>
+      </ScrollView>
+    </KeyboardAvoidingView>
   </View>
 )
 }

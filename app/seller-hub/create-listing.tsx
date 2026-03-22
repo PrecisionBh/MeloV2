@@ -40,14 +40,25 @@ type SelectorOption = {
 
 /* ---------------- SELECTOR DATA ---------------- */
 
+/* ---------------- SELECTOR DATA ---------------- */
+
 const SPORT_TYPES: SelectorOption[] = [
+  { label: "Baseball", value: "baseball" },
   { label: "Billiards", value: "billiards" },
-  { label: "Golf", value: "golf" },
-  { label: "Baseball / Softball", value: "baseball_softball" },
+  { label: "Bowling", value: "bowling" },
+  { label: "Boxing / MMA", value: "boxing_mma" },
   { label: "Cornhole", value: "cornhole" },
   { label: "Darts", value: "darts" },
   { label: "Disc Golf", value: "disc_golf" },
-  { label: "Bowling", value: "bowling" },
+  { label: "Esports / Gaming", value: "esports" },
+  { label: "Football", value: "football" },
+  { label: "Golf", value: "golf" },
+  { label: "Hockey", value: "hockey" },
+  { label: "Skateboarding", value: "skateboarding" },
+  { label: "Soccer", value: "soccer" },
+  { label: "Softball", value: "softball" },
+  { label: "Sports Cards", value: "sports_cards" },
+  { label: "Tennis", value: "tennis" },
 ]
 
 /* ---------------- SPORT → CATEGORY MAP ---------------- */
@@ -78,12 +89,87 @@ const SPORT_CATEGORY_MAP: Record<string, SelectorOption[]> = {
     { label: "Accessories", value: "golf_accessories" },
   ],
 
-  baseball_softball: [
-    { label: "Bats", value: "bats" },
-    { label: "Gloves", value: "gloves" },
-    { label: "Cleats", value: "cleats" },
-    { label: "Helmets", value: "helmets" },
-    { label: "Accessories", value: "accessories" },
+  baseball: [
+    { label: "Bats", value: "baseball_bats" },
+    { label: "Gloves", value: "baseball_gloves" },
+    { label: "Cleats", value: "baseball_cleats" },
+    { label: "Helmets", value: "baseball_helmets" },
+    { label: "Accessories", value: "baseball_accessories" },
+  ],
+
+  softball: [
+    { label: "Bats", value: "softball_bats" },
+    { label: "Gloves", value: "softball_gloves" },
+    { label: "Cleats", value: "softball_cleats" },
+    { label: "Helmets", value: "softball_helmets" },
+    { label: "Accessories", value: "softball_accessories" },
+  ],
+
+  basketball: [
+    { label: "Basketballs", value: "basketballs" },
+    { label: "Shoes", value: "basketball_shoes" },
+    { label: "Jerseys", value: "basketball_jerseys" },
+    { label: "Accessories", value: "basketball_accessories" },
+  ],
+
+  football: [
+    { label: "Helmets", value: "football_helmets" },
+    { label: "Pads", value: "football_pads" },
+    { label: "Cleats", value: "football_cleats" },
+    { label: "Accessories", value: "football_accessories" },
+  ],
+
+  soccer: [
+    { label: "Cleats", value: "soccer_cleats" },
+    { label: "Balls", value: "soccer_balls" },
+    { label: "Shin Guards", value: "shin_guards" },
+    { label: "Accessories", value: "soccer_accessories" },
+  ],
+
+  hockey: [
+    { label: "Sticks", value: "hockey_sticks" },
+    { label: "Skates", value: "hockey_skates" },
+    { label: "Helmets", value: "hockey_helmets" },
+    { label: "Pads", value: "hockey_pads" },
+    { label: "Accessories", value: "hockey_accessories" },
+  ],
+
+  tennis: [
+    { label: "Rackets", value: "tennis_rackets" },
+    { label: "Balls", value: "tennis_balls" },
+    { label: "Shoes", value: "tennis_shoes" },
+    { label: "Accessories", value: "tennis_accessories" },
+  ],
+
+  boxing_mma: [
+    { label: "Gloves", value: "boxing_gloves" },
+    { label: "Hand Wraps", value: "hand_wraps" },
+    { label: "Punching Bags", value: "punching_bags" },
+    { label: "Accessories", value: "boxing_accessories" },
+  ],
+
+  skateboarding: [
+    { label: "Decks", value: "decks" },
+    { label: "Trucks", value: "trucks" },
+    { label: "Wheels", value: "wheels" },
+    { label: "Complete Boards", value: "complete_boards" },
+    { label: "Accessories", value: "skate_accessories" },
+  ],
+
+  esports: [
+    { label: "Controllers", value: "controllers" },
+    { label: "Keyboards", value: "keyboards" },
+    { label: "Mice", value: "mice" },
+    { label: "Headsets", value: "headsets" },
+    { label: "Accessories", value: "gaming_accessories" },
+  ],
+
+  sports_cards: [
+    { label: "Graded Cards", value: "graded_cards" },
+    { label: "Raw Cards", value: "raw_cards" },
+    { label: "Sealed Boxes", value: "sealed_boxes" },
+    { label: "Packs", value: "packs" },
+    { label: "Supplies", value: "card_supplies" },
   ],
 
   cornhole: [
@@ -147,13 +233,23 @@ const SPORT_BRAND_MAP: Record<string, SelectorOption[]> = {
     { label: "Other", value: "other" },
   ],
 
-  baseball_softball: [
+  baseball: [
     { label: "Easton", value: "easton" },
     { label: "Rawlings", value: "rawlings" },
     { label: "Louisville Slugger", value: "louisville_slugger" },
     { label: "Wilson", value: "wilson" },
     { label: "Marucci", value: "marucci" },
+    { label: "Victus", value: "victus" },
+    { label: "Other", value: "other" },
+  ],
+
+  softball: [
+    { label: "Easton", value: "easton" },
+    { label: "Rawlings", value: "rawlings" },
+    { label: "Louisville Slugger", value: "louisville_slugger" },
+    { label: "Wilson", value: "wilson" },
     { label: "DeMarini", value: "demarini" },
+    { label: "Worth", value: "worth" },
     { label: "Other", value: "other" },
   ],
 
@@ -186,17 +282,6 @@ const SPORT_BRAND_MAP: Record<string, SelectorOption[]> = {
     { label: "Umbro", value: "umbro" },
     { label: "New Balance", value: "new_balance" },
     { label: "Mizuno", value: "mizuno" },
-    { label: "Other", value: "other" },
-  ],
-
-  fitness: [
-    { label: "Bowflex", value: "bowflex" },
-    { label: "NordicTrack", value: "nordictrack" },
-    { label: "Peloton", value: "peloton" },
-    { label: "Rogue Fitness", value: "rogue" },
-    { label: "Titan Fitness", value: "titan_fitness" },
-    { label: "CAP Barbell", value: "cap_barbell" },
-    { label: "Life Fitness", value: "life_fitness" },
     { label: "Other", value: "other" },
   ],
 

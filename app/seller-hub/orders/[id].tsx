@@ -352,13 +352,10 @@ const isCancelled =
   order.status === "cancelled"
 
 const canSellerCancel =
-  (isPaid || order.status === "processing") &&
-  !isShipped &&
-  !isCompleted &&
+  order.status === "paid" &&
   !isRefunded &&
-  !isReturnStarted &&
-  !isReturnProcessing &&
-  !hasActiveDispute
+  !hasActiveDispute &&
+  !isCancelled
 
 const showShippingAddress =
   (isPaid || isShipped) &&
@@ -510,6 +507,26 @@ return (
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* ❌ CANCEL ORDER BUTTON */}
+{canSellerCancel && (
+  <TouchableOpacity
+    style={{
+      backgroundColor: "#FF3B30",
+      padding: 14,
+      borderRadius: 12,
+      alignItems: "center",
+      marginTop: 16,
+      opacity: saving ? 0.6 : 1,
+    }}
+    disabled={saving}
+    onPress={handleCancelOrder}
+  >
+    <Text style={{ color: "#fff", fontWeight: "700" }}>
+      Cancel Order
+    </Text>
+  </TouchableOpacity>
+)}
 
             <View style={styles.field}>
               <Text style={styles.label}>Tracking Number</Text>
