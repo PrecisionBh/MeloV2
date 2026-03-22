@@ -6,6 +6,7 @@ type Props = {
   category: string | null
   brand: string | null
   condition: string | null
+  conditionSubtext?: string
   onPressSportType: () => void
   onPressCategory: () => void
   onPressBrand: () => void
@@ -205,6 +206,7 @@ export default function CategoryBrandConditionSection({
   category,
   brand,
   condition,
+  conditionSubtext,
   onPressSportType,
   onPressCategory,
   onPressBrand,
@@ -239,10 +241,11 @@ export default function CategoryBrandConditionSection({
         />
 
         <Field
-          label="Condition *"
-          value={formatCondition(condition)}
-          onPress={onPressCondition}
-        />
+  label="Condition *"
+  value={formatCondition(condition)}
+  subtext={conditionSubtext}
+  onPress={onPressCondition}
+/>
       </View>
     </View>
   )
@@ -251,12 +254,16 @@ export default function CategoryBrandConditionSection({
 function Field({
   label,
   value,
+  subtext,
   onPress,
 }: {
   label: string
   value: string
+  subtext?: string
   onPress: () => void
-}) {
+})
+
+{
   return (
     <TouchableOpacity
       style={styles.field}
@@ -266,6 +273,11 @@ function Field({
       <View>
         <Text style={styles.label}>{label}</Text>
         <Text style={styles.value}>{value}</Text>
+        {subtext && (
+  <Text style={{ fontSize: 12, color: "#6B6B6B", marginTop: 2 }}>
+    {subtext}
+  </Text>
+)}
       </View>
 
       <Ionicons name="chevron-forward" size={20} color="#7FAF9B" />
