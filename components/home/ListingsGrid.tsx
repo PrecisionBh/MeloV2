@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native"
 
-import UpgradeToProButton from "../pro/UpgradeToProButton"
+import UpgradeToProCard from "../pro/UpgradeToProCard"
 import ListingCard, { Listing } from "./ListingCard"
 import MegaBoostBlock from "./MegaBoostBlock"
 
@@ -161,7 +161,6 @@ export default function ListingsGrid({
       contentContainerStyle={styles.grid}
       showsVerticalScrollIndicator={false}
 
-      /* 🔧 STABILIZE IMAGE RENDERING */
       initialNumToRender={12}
       maxToRenderPerBatch={12}
       windowSize={10}
@@ -192,15 +191,21 @@ export default function ListingsGrid({
           if (item.type === "upgrade_row") {
             return (
               <View style={styles.fullRow}>
-                <UpgradeToProButton />
+                <UpgradeToProCard />
               </View>
             )
           }
 
           return (
             <View style={styles.row}>
-              {item.listings.map((l) => (
-                <View key={l.id} style={styles.cardWrap}>
+              {item.listings.map((l, index) => (
+                <View
+                  key={l.id}
+                  style={[
+                    styles.cardWrap,
+                    { marginRight: index !== NUM_COLUMNS - 1 ? 4 : 0 },
+                  ]}
+                >
                   <ListingCard
                     listing={l}
                     onPress={() => router.push(`/listing/${l.id}`)}
@@ -214,7 +219,15 @@ export default function ListingsGrid({
                   }).map((_, idx) => (
                     <View
                       key={`spacer-${item.id}-${idx}`}
-                      style={styles.cardWrap}
+                      style={[
+                        styles.cardWrap,
+                        {
+                          marginRight:
+                            idx !== NUM_COLUMNS - item.listings.length - 1
+                              ? 4
+                              : 0,
+                        },
+                      ]}
                     />
                   ))
                 : null}
@@ -238,7 +251,6 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
-    gap: 4,
     width: "100%",
     marginBottom: 4,
   },

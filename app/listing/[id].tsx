@@ -41,7 +41,7 @@ type Listing = {
 
 export default function ListingDetailScreen() {
   const router = useRouter()
-  const { id } = useLocalSearchParams<{ id: string }>()
+  const { id, scrollY } = useLocalSearchParams<{ id: string; scrollY?: string }>()
   const { session } = useAuth()
 
   const [listing, setListing] = useState<Listing | null>(null)
@@ -320,7 +320,7 @@ export default function ListingDetailScreen() {
    <AppHeader
   title="Listing"
   backLabel="Back"
-  backRoute="/"
+  onBack={() => router.back()}
 />
 
       <ScrollView contentContainerStyle={{ paddingBottom: 160 }}>

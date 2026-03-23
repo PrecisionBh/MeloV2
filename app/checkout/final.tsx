@@ -493,16 +493,17 @@ return (
 
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={90}
+      behavior={Platform.OS === "ios" ? "padding" : "height"} // 🔥 FIX
+      keyboardVerticalOffset={Platform.OS === "ios" ? 110 : 0} // 🔥 FIX
     >
       <ScrollView
         contentContainerStyle={{
           ...styles.content,
-          paddingBottom: insets.bottom + 140,
+          paddingBottom: insets.bottom + 220, // 🔥 MORE SPACE FOR KEYBOARD
         }}
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps="always" // 🔥 CRITICAL FIX
         keyboardDismissMode="on-drag"
+        contentInsetAdjustmentBehavior="always" // 🔥 iOS FIX
         showsVerticalScrollIndicator={false}
       >
         <ShippingAddress

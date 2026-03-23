@@ -6,22 +6,26 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 type AppHeaderProps = {
   title: string
   backLabel?: string
-  backRoute?: Href // ✅ FIXED: proper Expo Router type
+  backRoute?: Href
+  onBack?: () => void // 🔥 NEW (safe addition)
 }
 
 export default function AppHeader({
   title,
   backLabel = "Back",
   backRoute,
+  onBack,
 }: AppHeaderProps) {
   const router = useRouter()
   const insets = useSafeAreaInsets()
 
   const handleBack = () => {
-    if (backRoute) {
-      router.push(backRoute)
+    if (onBack) {
+      onBack() // ✅ PRIORITY (correct navigation stack)
+    } else if (backRoute) {
+      router.push(backRoute) // fallback (rare use)
     } else {
-      router.back()
+      router.back() // default safe behavior
     }
   }
 
@@ -45,7 +49,7 @@ export default function AppHeader({
       {/* TITLE */}
       <Text style={styles.headerTitle}>{title}</Text>
 
-      {/* 🏠 HOME BUTTON (RIGHT SIDE) */}
+      {/* 🏠 HOME BUTTON */}
       <TouchableOpacity
         style={styles.homeBtn}
         onPress={handleHome}
@@ -62,7 +66,7 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#7FAF9B", // Melo locked header color
+    backgroundColor: "#7FAF9B",
   },
 
   backBtn: {
@@ -73,7 +77,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // 🆕 RIGHT SIDE HOME BUTTON (mirrors back button positioning)
   homeBtn: {
     position: "absolute",
     right: 16,

@@ -9,7 +9,7 @@ import {
   View
 } from "react-native"
 
-import FilterBar, { FilterKey } from "../components/home/FilterBar"
+import FilterBar, { FilterKey, type FilterOption } from "../components/home/FilterBar"
 import HomeHeader from "../components/home/HomeHeader"
 import ListingsGrid from "../components/home/ListingsGrid"
 import SearchBar from "../components/home/SearchBar"
@@ -80,10 +80,7 @@ export default function HomeScreen() {
 
   /* ---------------- CATEGORY OPTIONS BY SPORT ---------------- */
 
-  const categoryOptions = useMemo<{
-  key: FilterKey
-  label: string
-}[]>(() => {
+  const categoryOptions = useMemo(() => {
   if (activeSport === "all") {
     return [
       { key: "all", label: "All" },
@@ -94,12 +91,13 @@ export default function HomeScreen() {
       { key: "accessories", label: "Accessories" },
       { key: "collectibles", label: "Collectibles" },
       { key: "other", label: "Other" },
-    ]
+    ] satisfies FilterOption[] // ✅ KEY FIX
   }
 
-  return SPORT_CATEGORY_MAP[activeSport] ?? [
-    { key: "all", label: "All" },
-  ]
+  return (
+    SPORT_CATEGORY_MAP[activeSport] ??
+    [{ key: "all", label: "All" }]
+  ) as FilterOption[] // ✅ FORCE TRUST HERE
 }, [activeSport])
 
   /* ---------------- RESET CATEGORY WHEN SPORT CHANGES ---------------- */
@@ -483,7 +481,6 @@ const checkUnreadMessages = async () => {
             onRefresh={refreshListings}
             showUpgradeRow={!isPro}
             megaBoostListings={megaBoostListings}
-            initialScrollOffset={scrollOffset}
             onScrollOffsetChange={setScrollOffset}
           />
         )}

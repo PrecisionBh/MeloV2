@@ -209,7 +209,10 @@ export default function CheckoutScreen() {
 
   return (
     <View style={styles.screen}>
-      <AppHeader title="Checkout" backRoute={backRoute} />
+      <AppHeader
+  title="Checkout"
+  onBack={() => router.back()}
+/>
 
       <ScrollView
         contentContainerStyle={styles.content}
