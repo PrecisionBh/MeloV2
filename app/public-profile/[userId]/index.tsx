@@ -64,6 +64,7 @@ export default function PublicProfileScreen() {
   const [ratingAvg, setRatingAvg] = useState<number | null>(null)
   const [ratingCount, setRatingCount] = useState(0)
   const [soldCount, setSoldCount] = useState(0)
+  const [loadingMore, setLoadingMore] = useState(false)
 
   // FOLLOW STATES
   const [isFollowing, setIsFollowing] = useState(false)
@@ -286,17 +287,18 @@ export default function PublicProfileScreen() {
 }
 
 
-  const loadListings = async (reset = false) => {
+ const loadListings = async (reset = false) => {
+  if (loadingMore) return   // 🚫 STOP DUPLICATES
+  if (!userId || (!hasMore && !reset)) return
+
   try {
-    if (!userId || (!hasMore && !reset)) return
+    setLoadingMore(true)
 
     const nextPage = reset ? 0 : page
 
     const { data, error } = await supabase
       .from("listings")
-      .select(
-        "id, title, price, category, image_urls, allow_offers"
-      )
+      .select("id, title, price, category, image_urls, allow_offers")
       .eq("user_id", userId)
       .eq("is_removed", false)
       .eq("is_sold", false)
@@ -315,7 +317,15 @@ export default function PublicProfileScreen() {
       setPage(1)
       setHasMore(rows.length === PAGE_SIZE)
     } else {
-      setListings((prev) => [...prev, ...rows])
+      setListings((prev) => {
+        const map = new Map()
+
+        prev.forEach((item) => map.set(item.id, item))
+        rows.forEach((item) => map.set(item.id, item))
+
+        return Array.from(map.values())
+      })
+
       setPage((p) => p + 1)
       setHasMore(rows.length === PAGE_SIZE)
     }
@@ -323,6 +333,8 @@ export default function PublicProfileScreen() {
     handleAppError(err, {
       fallbackMessage: "Failed to load listings.",
     })
+  } finally {
+    setLoadingMore(false)
   }
 }
 
@@ -346,10 +358,10 @@ export default function PublicProfileScreen() {
   <View style={styles.screen}>
     {/* HEADER */}
     <AppHeader
-      title="Profile"
-      backLabel="Back"
-      backRoute="/profile"
-    />
+  title="Profile"
+  backLabel="Back"
+  onBack={() => router.back()}
+/>
 
     <FlatList
       data={listings}
@@ -363,7 +375,11 @@ export default function PublicProfileScreen() {
         justifyContent: "space-between",
         marginBottom: 16,
       }}
-      onEndReached={() => loadListings()}
+      onEndReached={() => {
+  if (!loadingMore && hasMore) {
+    loadListings()
+  }
+}}
       onEndReachedThreshold={0.6}
       
       ListHeaderComponent={

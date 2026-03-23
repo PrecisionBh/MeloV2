@@ -87,6 +87,14 @@ export default function SettingsScreen() {
           label="Manage subscription"
           onPress={() => router.push("/manage-subscription")}
         />
+
+        {/* 🔥 NEW DELETE ACCOUNT BUTTON */}
+        <SettingsItem
+          icon="trash-outline"
+          label="Delete Account"
+          onPress={() => router.push("/settings/delete-account")}
+          danger
+        />
       </View>
 
       {/* LEGAL */}
@@ -128,15 +136,24 @@ function SettingsItem({
   icon,
   label,
   onPress,
+  danger,
 }: {
   icon: any
   label: string
   onPress: () => void
+  danger?: boolean
 }) {
   return (
     <TouchableOpacity style={styles.item} onPress={onPress} activeOpacity={0.7}>
-      <Ionicons name={icon} size={20} color="#0F1E17" />
-      <Text style={styles.itemText}>{label}</Text>
+      <Ionicons name={icon} size={20} color={danger ? "#FF3B30" : "#0F1E17"} />
+      <Text
+        style={[
+          styles.itemText,
+          danger && { color: "#FF3B30", fontWeight: "700" },
+        ]}
+      >
+        {label}
+      </Text>
       <Ionicons
         name="chevron-forward"
         size={18}

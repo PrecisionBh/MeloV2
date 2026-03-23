@@ -229,7 +229,7 @@ try {
 
     // ✅ Go back to the listing detail route that launched this offer page
     if (listingId) {
-      router.push({
+      router.replace({
         pathname: "/listing/[id]",
         params: { id: listingId },
       })
@@ -254,16 +254,9 @@ if (!listing) return null
 return (
   <View style={styles.screen}>
     <AppHeader
-      title="Make Offer"
-      backLabel="Back"
-      backRoute={
-        listingId
-          ? ({
-              pathname: "/listing/[id]",
-              params: { id: listingId },
-            } as any)
-          : undefined
-      }
+   title="Make Offer"
+backLabel="Back"
+onBack={() => router.back()}
     />
 
     <KeyboardAvoidingView
