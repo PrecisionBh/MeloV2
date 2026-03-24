@@ -332,6 +332,77 @@ setOffer((prev) =>
 loadOffer()
   }
 
+  // 🔥 NEW: CANCEL OFFER (BUYER SIDE)
+  const cancelOffer = async () => {
+    if (!offer || saving) return
+
+    Alert.alert(
+      "Cancel Offer",
+      "Are you sure you want to cancel this offer?",
+      [
+        { text: "No" },
+        {
+          text: "Yes",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setSaving(true)
+
+              const { error } = await supabase
+                .from("offers")
+                .update({
+                  status: "declined", // reuse existing system
+                  last_actor: "buyer",
+                  last_action: "cancelled",
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", offer.id)
+                .eq("buyer_id", session!.user!.id)
+                .eq("status", "pending")
+
+              if (error) throw error
+
+              try {
+                await supabase.functions.invoke("send-notification", {
+                  body: {
+                    userId: offer.seller_id,
+                    type: "offer",
+                    title: "Offer cancelled",
+                    body: "The buyer cancelled their offer.",
+                    data: {
+                      route: "/seller-hub/offers",
+                    },
+                    dedupeKey: `offer-cancelled-${offer.id}`,
+                  },
+                })
+              } catch (err) {
+                console.log("⚠️ cancel notification failed:", err)
+              }
+
+              setOffer((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      status: "declined",
+                      last_actor: "buyer",
+                    }
+                  : prev
+              )
+
+              loadOffer()
+            } catch (err) {
+              handleAppError(err, {
+                fallbackMessage: "Failed to cancel offer.",
+              })
+            } finally {
+              setSaving(false)
+            }
+          },
+        },
+      ]
+    )
+  }
+
   const submitCounter = async () => {
     if (!offer || saving) return
 
@@ -479,41 +550,62 @@ return (
         <View style={{ height: 28 }} />
 
         {/* 🔥 ACTION BUTTONS SCROLL WITH CONTENT (NO ABSOLUTE) */}
-        {canRespond && (
-          <View style={styles.actionBar}>
-            <TouchableOpacity
-              style={styles.acceptBtn}
-              onPress={acceptOffer}
-            >
-              <Text style={styles.acceptText}>
-                Accept Offer
-              </Text>
-            </TouchableOpacity>
+{!isExpired &&
+  offer.status !== "accepted" &&
+  offer.status !== "declined" && (
+  <View style={styles.actionBar}>
 
-            <TouchableOpacity
-              style={styles.counterBtn}
-              onPress={() => setShowCounter(true)}
-            >
-              <Text style={styles.counterText}>
-                Counter
-              </Text>
-            </TouchableOpacity>
+    {/* ✅ RESPOND BUTTONS (ONLY when seller acted last) */}
+    {canRespond && (
+      <>
+        <TouchableOpacity
+          style={styles.acceptBtn}
+          onPress={acceptOffer}
+        >
+          <Text style={styles.acceptText}>
+            Accept Offer
+          </Text>
+        </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.declineBtn}
-              onPress={declineOffer}
-            >
-              <Text style={styles.declineText}>
-                Decline
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        <TouchableOpacity
+          style={styles.counterBtn}
+          onPress={() => setShowCounter(true)}
+        >
+          <Text style={styles.counterText}>
+            Counter
+          </Text>
+        </TouchableOpacity>
 
-        {/* 🔥 BOTTOM PADDING: ensures buttons never hug bottom nav */}
-        <View style={{ height: 48 }} />
-      </View>
-    </ScrollView>
+        <TouchableOpacity
+          style={styles.declineBtn}
+          onPress={declineOffer}
+        >
+          <Text style={styles.declineText}>
+            Decline
+          </Text>
+        </TouchableOpacity>
+      </>
+    )}
+
+    {/* 🔥 CANCEL ALWAYS AVAILABLE DURING NEGOTIATION */}
+    {(offer.status === "pending" || offer.status === "countered") && (
+      <TouchableOpacity
+        style={styles.declineBtn}
+        onPress={cancelOffer}
+      >
+        <Text style={styles.declineText}>
+          Cancel Offer
+        </Text>
+      </TouchableOpacity>
+    )}
+
+  </View>
+)}
+
+{/* 🔥 BOTTOM PADDING: ensures buttons never hug bottom nav */}
+<View style={{ height: 48 }} />
+</View>
+</ScrollView>
 
     {/* COUNTER MODAL (UNCHANGED) */}
     <Modal visible={showCounter} transparent animationType="fade">

@@ -168,7 +168,7 @@ export default function MeloProScreen() {
   <PerkRow
     icon="infinite-outline"
     title="Unlimited active listings"
-    desc="Free users are capped at 5 active listings. Pro removes the cap."
+    desc="Free users are capped at 8 active listings. Pro removes the cap."
   />
   <PerkRow
     icon="cube-outline"
@@ -182,7 +182,7 @@ export default function MeloProScreen() {
   />
   <PerkRow
     icon="flame-outline"
-    title="1 Mega Boost per month"
+    title="1 Mega Boost on sign-up"
     desc="One free Mega Boost to dominate the top of the marketplace. Mega Boost get credited back to your account if your item doesnt sell. "
   />
   

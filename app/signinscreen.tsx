@@ -1,3 +1,4 @@
+import KeyboardWrapper from "@/components/KeyboardWrapper"
 import { useRouter } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import {
@@ -157,7 +158,7 @@ export default function SignInScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+  <KeyboardWrapper contentContainerStyle={styles.screen}>
       {/* BRANDING */}
       <View style={styles.branding}>
         <Text style={styles.brandTitle}>MELO</Text>
@@ -272,7 +273,7 @@ export default function SignInScreen() {
           Partnered With Precision Sports LLC
         </Text>
       </View>
-    </View>
+    </KeyboardWrapper>
   )
 }
 
@@ -281,7 +282,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 24,
-    justifyContent: "center",
+    justifyContent: "flex-start",
+paddingTop: 80,
   },
 
   branding: {

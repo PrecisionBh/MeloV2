@@ -1,3 +1,4 @@
+import KeyboardWrapper from "@/components/KeyboardWrapper"
 import { useRouter } from "expo-router"
 import { useState } from "react"
 import {
@@ -28,7 +29,6 @@ export default function ForgotPasswordScreen() {
 
       setLoading(true)
 
-      /* SEND OTP CODE */
       const { error } = await supabase.auth.signInWithOtp({
         email: normalizedEmail,
         options: {
@@ -38,9 +38,7 @@ export default function ForgotPasswordScreen() {
 
       if (error) throw error
 
-      /* NAVIGATE TO OTP SCREEN */
       router.push(`/verify-otp?email=${normalizedEmail}`)
-
     } catch (err) {
       handleAppError(err, {
         context: "forgot_password_otp_send",
@@ -53,7 +51,7 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+    <KeyboardWrapper contentContainerStyle={styles.screen}>
       {/* BRANDING */}
       <View style={styles.branding}>
         <Text style={styles.brandTitle}>MELO</Text>
@@ -105,28 +103,27 @@ export default function ForgotPasswordScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* FOOTER */}
+      {/* FOOTER (no absolute so it doesn’t break with keyboard) */}
       <View style={styles.footerContainer}>
         <Text style={styles.footerText}>
           Partnered With Precision Sports LLC
         </Text>
       </View>
-    </View>
+    </KeyboardWrapper>
   )
 }
 
 const styles = StyleSheet.create({
   screen: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 24,
-    justifyContent: "center",
+    paddingTop: 80, // 🔥 iOS safe spacing
   },
 
   branding: {
     alignItems: "center",
     marginBottom: 28,
-    transform: [{ translateY: -40 }],
   },
 
   brandTitle: {
@@ -206,10 +203,7 @@ const styles = StyleSheet.create({
   },
 
   footerContainer: {
-    position: "absolute",
-    bottom: 60,
-    left: 0,
-    right: 0,
+    marginTop: 40,
     alignItems: "center",
   },
 

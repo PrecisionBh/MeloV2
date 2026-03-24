@@ -23,12 +23,12 @@ export default function ProBenefitsCard({ isPro }: Props) {
       {/* Benefits List */}
       <View style={styles.list}>
         <Benefit text="Lower seller fees (5% → 3.5%)" />
-        <Benefit text="5 free Boosts per month" />
-        <Benefit text="1 free Mega Boost per month" />
+        <Benefit text="5 free Boosts on sign-up" />
+        <Benefit text="1 free Mega Boost on sign-up" />
         <Benefit text="Automatic payout history & bookkeeping" />
         <Benefit text="Premium public profile + Pro badge" />
         <Benefit text="Purchase additional boosts & mega boosts" />
-        <Benefit text="Future Verified Seller badge (KYC)" />
+        <Benefit text="Add quantities to your listings to sell more at once" />
       </View>
     </View>
   )

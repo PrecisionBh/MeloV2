@@ -3,16 +3,18 @@ import * as Linking from "expo-linking"
 import { useRouter } from "expo-router"
 import { useEffect, useMemo, useState } from "react"
 import {
-    Alert,
-    Dimensions,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native"
 
 import AppHeader from "@/components/app-header"
+import { purchaseItem } from "@/lib/iap"
 import { supabase } from "@/lib/supabase"
 
 const { width } = Dimensions.get("window")
@@ -29,28 +31,28 @@ type Pack = {
 
 const BOOST_PACKS: Pack[] = [
   {
-    id: "boost_3",
+    id: "boost_pack_3",
     title: "Starter Pack",
     subtitle: "3 Boosts • 7 days each",
-    priceLabel: "$9.99",
+    priceLabel: "3 Boosts",
     credits: 3,
     badge: "Great to start",
     accent: "boost",
   },
   {
-    id: "boost_10",
+    id: "boost_pack_10",
     title: "Growth Pack",
     subtitle: "10 Boosts • 7 days each",
-    priceLabel: "$27.99",
+    priceLabel: "10 Boosts",
     credits: 10,
     badge: "Most Popular",
     accent: "boost",
   },
   {
-    id: "boost_25",
+    id: "boost_pack_25",
     title: "Power Pack",
     subtitle: "25 Boosts • 7 days each",
-    priceLabel: "$59.99",
+    priceLabel: "25 Boosts",
     credits: 25,
     badge: "Best Value",
     accent: "boost",
@@ -59,28 +61,28 @@ const BOOST_PACKS: Pack[] = [
 
 const MEGA_PACKS: Pack[] = [
   {
-    id: "mega_1",
+    id: "mega_boost_1",
     title: "Mega Boost",
     subtitle: "1 Mega • 14 days",
-    priceLabel: "$19.99",
+    priceLabel: "1 Mega",
     credits: 1,
     badge: "Top placement",
     accent: "mega",
   },
   {
-    id: "mega_3",
+    id: "mega_boost_3",
     title: "Mega Pack",
     subtitle: "3 Megas • 14 days each",
-    priceLabel: "$49.99",
+    priceLabel: "3 Megas",
     credits: 3,
     badge: "Most Popular",
     accent: "mega",
   },
   {
-    id: "mega_8",
+    id: "mega_boost_8",
     title: "Mega Pro Pack",
     subtitle: "8 Megas • 14 days each",
-    priceLabel: "$99.99",
+    priceLabel: "8 Megas",
     credits: 8,
     badge: "Best Value",
     accent: "mega",
@@ -173,6 +175,13 @@ export default function PackagesScreen() {
     try {
       setBuyingId(packId)
 
+      // 🔥 iOS → Apple IAP
+      if (Platform.OS === "ios") {
+        await purchaseItem(packId)
+        return
+      }
+
+      // 🔥 Android/Web → Stripe (unchanged)
       const { data, error } = await supabase.functions.invoke(
         "create-boost-checkout",
         {
@@ -182,8 +191,6 @@ export default function PackagesScreen() {
           },
         }
       )
-
-    console.log("Invoke result:", { data, error })
 
       if (error) throw error
 

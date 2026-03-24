@@ -14,9 +14,11 @@ import HomeHeader from "../components/home/HomeHeader"
 import ListingsGrid from "../components/home/ListingsGrid"
 import SearchBar from "../components/home/SearchBar"
 
+import { Platform } from "react-native"
 import { Listing } from "../components/home/ListingCard"
 import SportFilterBar, { SportKey } from "../components/home/SportFilterBar"
 import { handleAppError } from "../lib/errors/appError"
+import { initIAP } from "../lib/iap"
 import { SPORT_CATEGORY_MAP } from "../lib/sportCategories"
 import { supabase } from "../lib/supabase"
 
@@ -77,6 +79,34 @@ export default function HomeScreen() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [isPro, setIsPro] = useState(false)
   const [megaBoostListings, setMegaBoostListings] = useState<Listing[]>([])
+
+  useEffect(() => {
+  // 🚨 STOP IAP ON ANDROID
+  if (Platform.OS !== "ios") return
+
+  let cleanup: any
+
+  const init = async () => {
+    try {
+      console.log("🔥 INIT IAP RUNNING")
+
+      setTimeout(async () => {
+        await initIAP()
+        // 🚫 listener still disabled for now
+        // cleanup = setupPurchaseListener()
+      }, 500)
+
+    } catch (err) {
+      console.error("IAP init error:", err)
+    }
+  }
+
+  init()
+
+  return () => {
+    if (cleanup) cleanup()
+  }
+}, [])
 
   /* ---------------- CATEGORY OPTIONS BY SPORT ---------------- */
 

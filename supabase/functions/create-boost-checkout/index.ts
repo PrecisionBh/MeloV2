@@ -15,12 +15,12 @@ const supabase = createClient(
 )
 
 const PRICE_MAP: Record<string, string> = {
-  boost_3: "price_1TBlobDaisGHVOvP55rcOXmZ",
-  boost_10: "price_1TBlobDaisGHVOvPsuDCQW9e",
-  boost_25: "price_1TBlodDaisGHVOvP7CrM4Iba",
-  mega_1: "price_1TBlodDaisGHVOvPWyNq9D3l",
-  mega_3: "price_1TBlobDaisGHVOvPUx0Kx0QI",
-  mega_8: "price_1TBlobDaisGHVOvPr7nhCVlj",
+  boost_pack_3: "price_1TBlobDaisGHVOvP55rcOXmZ",
+  boost_pack_10: "price_1TBlobDaisGHVOvPsuDCQW9e",
+  boost_pack_25: "price_1TBlodDaisGHVOvP7CrM4Iba",
+  mega_boost_1: "price_1TBlodDaisGHVOvPWyNq9D3l",
+  mega_boost_3: "price_1TBlobDaisGHVOvPUx0Kx0QI",
+  mega_boost_8: "price_1TBlobDaisGHVOvPr7nhCVlj",
 }
 
 Deno.serve(async (req) => {

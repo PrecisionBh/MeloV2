@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons"
 import { useFocusEffect, useRouter } from "expo-router"
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import {
   ActivityIndicator,
   FlatList,
@@ -16,7 +16,6 @@ import { useAuth } from "@/context/AuthContext"
 import { handleAppError } from "@/lib/errors/appError"
 import { supabase } from "@/lib/supabase"
 
-
 /* ---------------- TYPES ---------------- */
 
 type OfferStatus =
@@ -31,6 +30,7 @@ type Offer = {
   counter_count: number
   status: OfferStatus
   last_actor: "buyer" | "seller"
+  created_at: string
   listings: {
     id: string
     title: string
@@ -46,8 +46,7 @@ export default function BuyerOffersScreen() {
 
   const [offers, setOffers] = useState<Offer[]>([])
   const [loading, setLoading] = useState(true)
-
-  /* ---------------- LOAD OFFERS ---------------- */
+  const [tab, setTab] = useState<"active" | "declined" | "expired">("active")
 
   useFocusEffect(
     useCallback(() => {
@@ -71,6 +70,7 @@ export default function BuyerOffersScreen() {
         counter_count,
         status,
         last_actor,
+        created_at,
         listings (
           id,
           title,
@@ -82,33 +82,75 @@ export default function BuyerOffersScreen() {
       .returns<Offer[]>()
 
     if (error) {
-  handleAppError(error, {
-    fallbackMessage: "Failed to load your offers. Please try again.",
-  })
-  setOffers([])
-} else {
-  setOffers(data ?? [])
-}
-
+      handleAppError(error, {
+        fallbackMessage: "Failed to load your offers.",
+      })
+      setOffers([])
+    } else {
+      setOffers(data ?? [])
+    }
 
     setLoading(false)
   }
 
-  /* ---------------- RENDER ---------------- */
+  const filteredOffers = useMemo(() => {
+    return offers.filter((offer) => {
+      const created = new Date(offer.created_at).getTime()
+      const isExpired =
+        Date.now() > created + 24 * 60 * 60 * 1000
+
+      if (tab === "active") {
+        return !isExpired && offer.status !== "declined"
+      }
+
+      if (tab === "declined") {
+        return offer.status === "declined"
+      }
+
+      if (tab === "expired") {
+        return isExpired
+      }
+
+      return true
+    })
+  }, [offers, tab])
 
   return (
     <View style={styles.screen}>
-      {/* STANDARDIZED HEADER */}
       <AppHeader
         title="My Offers"
         backLabel="Buyer Hub"
         backRoute="/buyer-hub"
       />
 
-      {/* CONTENT */}
+      <View style={styles.toggleWrap}>
+        {(["active", "declined", "expired"] as const).map((t) => {
+          const isActive = tab === t
+          return (
+            <TouchableOpacity
+              key={t}
+              onPress={() => setTab(t)}
+              style={[
+                styles.toggleBtn,
+                isActive && styles.toggleBtnActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.toggleText,
+                  isActive && styles.toggleTextActive,
+                ]}
+              >
+                {t.charAt(0).toUpperCase() + t.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          )
+        })}
+      </View>
+
       {loading ? (
         <ActivityIndicator style={{ marginTop: 60 }} />
-      ) : offers.length === 0 ? (
+      ) : filteredOffers.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons
             name="pricetag-outline"
@@ -116,26 +158,34 @@ export default function BuyerOffersScreen() {
             color="#7FAF9B"
           />
           <Text style={styles.emptyText}>
-            You haven’t made any offers yet
+            No offers in this category
           </Text>
           <Text style={styles.emptySub}>
-            When you submit offers, they’ll show up here
+            Try switching tabs above
           </Text>
         </View>
       ) : (
         <FlatList
-          data={offers}
+          data={filteredOffers}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: 16, paddingBottom: 140 }}
+          contentContainerStyle={{
+            padding: 16,
+            paddingBottom: 140,
+          }}
           renderItem={({ item }) => {
-            const statusText =
-              item.status === "accepted"
-                ? "Accepted – Ready to pay"
-                : item.status === "declined"
-                ? "Declined"
-                : item.last_actor === "seller"
-                ? "Seller responded"
-                : "Waiting on seller"
+            const created = new Date(item.created_at).getTime()
+            const isExpired =
+              Date.now() > created + 24 * 60 * 60 * 1000
+
+            const statusText = isExpired
+              ? "Expired"
+              : item.status === "accepted"
+              ? "Accepted – Ready to pay"
+              : item.status === "declined"
+              ? "Declined"
+              : item.last_actor === "seller"
+              ? "Seller responded"
+              : "Waiting on seller"
 
             return (
               <TouchableOpacity
@@ -176,12 +226,41 @@ export default function BuyerOffersScreen() {
   )
 }
 
-/* ---------------- STYLES (UNCHANGED) ---------------- */
-
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#EAF4EF",
+  },
+
+  toggleWrap: {
+    flexDirection: "row",
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 6,
+    backgroundColor: "#DCEEE6",
+    borderRadius: 12,
+    padding: 4,
+  },
+
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+
+  toggleBtnActive: {
+    backgroundColor: "#1F7A63",
+  },
+
+  toggleText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#1F7A63",
+  },
+
+  toggleTextActive: {
+    color: "#FFFFFF",
   },
 
   empty: {

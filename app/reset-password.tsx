@@ -1,3 +1,4 @@
+import KeyboardWrapper from "@/components/KeyboardWrapper"
 import { useRouter } from "expo-router"
 import { useState } from "react"
 import {
@@ -7,7 +8,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
 } from "react-native"
 import { handleAppError } from "../lib/errors/appError"
 import { supabase } from "../lib/supabase"
@@ -28,8 +28,6 @@ export default function ResetPasswordScreen() {
     password.length >= 6 &&
     confirmPassword.length >= 6 &&
     password === confirmPassword
-
-  /* ---------------- RESET PASSWORD ---------------- */
 
   const handleResetPassword = async () => {
     if (!isValid || loading) return
@@ -81,15 +79,15 @@ export default function ResetPasswordScreen() {
   }
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.branding}>
-        <Text style={styles.brandTitle}>MELO</Text>
-        <Text style={styles.subtitle}>Secure Password Reset</Text>
-      </View>
+    <KeyboardWrapper contentContainerStyle={styles.screen}>
+      {/* BRANDING */}
+      <Text style={styles.brandTitle}>MELO</Text>
+      <Text style={styles.subtitle}>Secure Password Reset</Text>
+
+      {/* CARD */}
+      <Text style={styles.title}>Create New Password</Text>
 
       <View style={styles.card}>
-        <Text style={styles.title}>Create New Password</Text>
-
         <View style={styles.passwordWrapper}>
           <TextInput
             style={styles.passwordInput}
@@ -143,22 +141,18 @@ export default function ResetPasswordScreen() {
           )}
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardWrapper>
   )
 }
 
+import { View } from "react-native"
+
 const styles = StyleSheet.create({
   screen: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 24,
-    justifyContent: "center",
-  },
-
-  branding: {
-    alignItems: "center",
-    marginBottom: 28,
-    transform: [{ translateY: -40 }],
+    paddingTop: 80, // 🔥 KEY FIX FOR iOS
   },
 
   brandTitle: {
@@ -166,14 +160,24 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#2E5F4F",
     letterSpacing: 2,
+    textAlign: "center",
+    marginBottom: 6,
   },
 
   subtitle: {
-    marginTop: 6,
     fontSize: 14,
     fontWeight: "600",
     color: "#6B8F82",
     textAlign: "center",
+    marginBottom: 20,
+  },
+
+  title: {
+    fontSize: 24,
+    fontWeight: "800",
+    marginBottom: 16,
+    textAlign: "center",
+    color: "#2E5F4F",
   },
 
   card: {
@@ -185,14 +189,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
-  },
-
-  title: {
-    fontSize: 24,
-    fontWeight: "800",
-    marginBottom: 20,
-    textAlign: "center",
-    color: "#2E5F4F",
   },
 
   passwordWrapper: {
