@@ -4,8 +4,8 @@ import { Image, StyleSheet, Text, View } from "react-native"
 import { useAuth } from "../context/AuthContext"
 import { handleAppError } from "../lib/errors/appError"
 
-const MIN_SPLASH_TIME = 1500 // minimum splash time
-const MAX_SPLASH_TIME = 4000 // hard cap safety
+const MIN_SPLASH_TIME = 1500
+const MAX_SPLASH_TIME = 4000
 
 export default function Index() {
   const router = useRouter()
@@ -25,9 +25,11 @@ export default function Index() {
 
       try {
         if (session) {
+          // ✅ Logged in → full app
           router.replace("/home")
         } else {
-          router.replace("/signinscreen")
+          // ✅ NOT logged in → still go to home (guest mode)
+          router.replace("/home")
         }
       } catch (err) {
         console.error("Splash navigation error:", err)
@@ -37,7 +39,7 @@ export default function Index() {
         })
 
         try {
-          router.replace("/signinscreen")
+          router.replace("/home")
         } catch {}
       }
     }
@@ -107,7 +109,7 @@ const styles = StyleSheet.create({
 
   footer: {
     position: "absolute",
-    bottom: 80,   // moved up so it never gets blocked
+    bottom: 80,
     fontSize: 12,
     color: "#94A3B8",
     fontWeight: "600",

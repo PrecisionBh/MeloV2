@@ -14,11 +14,10 @@ import HomeHeader from "../components/home/HomeHeader"
 import ListingsGrid from "../components/home/ListingsGrid"
 import SearchBar from "../components/home/SearchBar"
 
-import { Platform } from "react-native"
 import { Listing } from "../components/home/ListingCard"
 import SportFilterBar, { SportKey } from "../components/home/SportFilterBar"
+import { useAuth } from "../context/AuthContext"
 import { handleAppError } from "../lib/errors/appError"
-import { initIAP } from "../lib/iap"
 import { SPORT_CATEGORY_MAP } from "../lib/sportCategories"
 import { supabase } from "../lib/supabase"
 
@@ -56,6 +55,8 @@ type ListingRow = {
 
 export default function HomeScreen() {
   const router = useRouter()
+  const { session } = useAuth()
+  const [showAuthModal, setShowAuthModal] = useState(false)
 
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
@@ -80,33 +81,14 @@ export default function HomeScreen() {
   const [isPro, setIsPro] = useState(false)
   const [megaBoostListings, setMegaBoostListings] = useState<Listing[]>([])
 
-  useEffect(() => {
-  // 🚨 STOP IAP ON ANDROID
-  if (Platform.OS !== "ios") return
-
-  let cleanup: any
-
-  const init = async () => {
-    try {
-      console.log("🔥 INIT IAP RUNNING")
-
-      setTimeout(async () => {
-        await initIAP()
-        // 🚫 listener still disabled for now
-        // cleanup = setupPurchaseListener()
-      }, 500)
-
-    } catch (err) {
-      console.error("IAP init error:", err)
+  const requireAuth = (action?: () => void) => {
+    if (!session?.user) {
+      setShowAuthModal(true)
+      return
     }
-  }
 
-  init()
-
-  return () => {
-    if (cleanup) cleanup()
+    action?.()
   }
-}, [])
 
   /* ---------------- CATEGORY OPTIONS BY SPORT ---------------- */
 
@@ -478,9 +460,15 @@ const checkUnreadMessages = async () => {
           <HomeHeader
             hasUnreadNotifications={hasUnreadNotifications}
             hasUnreadMessages={hasUnreadMessages}
-            onNotificationsPress={() => router.push("/notifications")}
-            onMessagesPress={() => router.push("/messages")}
-            onProfilePress={() => router.push("/profile")}
+            onNotificationsPress={() =>
+  requireAuth(() => router.push("/notifications"))
+}
+onMessagesPress={() =>
+  requireAuth(() => router.push("/messages"))
+}
+onProfilePress={() =>
+  requireAuth(() => router.push("/profile"))
+}
             onMenuPress={() => setMenuOpen(true)}
           />
 
@@ -517,7 +505,11 @@ const checkUnreadMessages = async () => {
 
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => router.push("/seller-hub/create-listing")}
+          onPress={() =>
+  requireAuth(() =>
+    router.push("/seller-hub/create-listing")
+  )
+}
           activeOpacity={0.9}
         >
           <Ionicons name="add" size={20} color="#0F1E17" />
@@ -539,7 +531,7 @@ const checkUnreadMessages = async () => {
               label="Buyer Hub"
               onPress={() => {
                 setMenuOpen(false)
-                router.push("/buyer-hub")
+                requireAuth(() => router.push("/buyer-hub"))
               }}
             />
 
@@ -550,7 +542,7 @@ const checkUnreadMessages = async () => {
               label="My Likes"
               onPress={() => {
                 setMenuOpen(false)
-                router.push("/watching")
+                requireAuth(() => router.push("/watching"))
               }}
             />
 
@@ -561,7 +553,7 @@ const checkUnreadMessages = async () => {
               label="Seller Hub"
               onPress={() => {
                 setMenuOpen(false)
-                router.push("/seller-hub")
+                requireAuth(() => router.push("/seller-hub"))
               }}
             />
 
@@ -572,7 +564,7 @@ const checkUnreadMessages = async () => {
               label="Wallet"
               onPress={() => {
                 setMenuOpen(false)
-                router.push("/seller-hub/wallet")
+                requireAuth(() => router.push("/seller-hub/wallet"))
               }}
             />
 
@@ -583,7 +575,7 @@ const checkUnreadMessages = async () => {
               label="Edit Profile"
               onPress={() => {
                 setMenuOpen(false)
-                router.push("/settings/edit-profile")
+                requireAuth(() => router.push("/settings/edit-profile"))
               }}
             />
 
@@ -594,12 +586,48 @@ const checkUnreadMessages = async () => {
               label="Settings"
               onPress={() => {
                 setMenuOpen(false)
-                router.push("/settings")
+                requireAuth(() => router.push("/settings"))
               }}
             />
           </View>
         </View>
       )}
+
+      {showAuthModal && (
+  <View style={styles.authOverlay}>
+    <View style={styles.authModal}>
+      <Text style={styles.authTitle}>
+        Sign in to continue
+      </Text>
+
+      <TouchableOpacity
+        style={styles.authBtn}
+        onPress={() => {
+          setShowAuthModal(false)
+          router.push("/signinscreen")
+        }}
+      >
+        <Text style={styles.authBtnText}>Sign In</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.authBtnOutline}
+        onPress={() => {
+          setShowAuthModal(false)
+          router.push("/register")
+        }}
+      >
+        <Text style={styles.authBtnOutlineText}>
+          Create Account
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => setShowAuthModal(false)}>
+        <Text style={styles.authCancel}>Not now</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+)}
     </>
   )
 }
@@ -711,4 +739,62 @@ const styles = StyleSheet.create({
     backgroundColor: "#EEF3F0",
     marginHorizontal: 12,
   },
+
+  authOverlay: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: "rgba(0,0,0,0.4)",
+  justifyContent: "center",
+  alignItems: "center",
+},
+
+authModal: {
+  width: "85%",
+  backgroundColor: "#fff",
+  borderRadius: 20,
+  padding: 20,
+  alignItems: "center",
+},
+
+authTitle: {
+  fontSize: 18,
+  fontWeight: "800",
+  marginBottom: 16,
+},
+
+authBtn: {
+  width: "100%",
+  backgroundColor: "#7FAF9B",
+  padding: 14,
+  borderRadius: 12,
+  alignItems: "center",
+  marginBottom: 10,
+},
+
+authBtnText: {
+  color: "#0F1E17",
+  fontWeight: "800",
+},
+
+authBtnOutline: {
+  width: "100%",
+  borderWidth: 1,
+  borderColor: "#7FAF9B",
+  padding: 14,
+  borderRadius: 12,
+  alignItems: "center",
+},
+
+authBtnOutlineText: {
+  color: "#7FAF9B",
+  fontWeight: "800",
+},
+
+authCancel: {
+  marginTop: 12,
+  color: "#999",
+},
 })

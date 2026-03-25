@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons"
-import * as Linking from "expo-linking"
 import { useRouter } from "expo-router"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   ActivityIndicator,
   Alert,
@@ -11,6 +10,9 @@ import {
   View,
 } from "react-native"
 
+import { getOfferings } from "@/lib/revenuecat"
+import Purchases from "react-native-purchases"
+
 import AppHeader from "@/components/app-header"
 import { useAuth } from "@/context/AuthContext"
 import { handleAppError } from "@/lib/errors/appError"
@@ -19,89 +21,88 @@ import { supabase } from "@/lib/supabase"
 export default function MeloProCheckoutScreen() {
   const router = useRouter()
   const { session } = useAuth()
+
   const [loading, setLoading] = useState(false)
+  const [rcPackage, setRcPackage] = useState<any>(null)
+  const [price, setPrice] = useState("$24.99")
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const offering = await getOfferings()
+        if (!offering) return
+
+        const proPackage = offering.availablePackages.find(
+          (pkg) => pkg.product.identifier === "melo_pro_subscription"
+        )
+
+        if (!proPackage) return
+
+        setRcPackage(proPackage)
+        setPrice(proPackage.product.priceString)
+      } catch (err) {
+        console.error("❌ RevenueCat load error:", err)
+      }
+    }
+
+    load()
+  }, [])
 
   const handleSubscribe = async () => {
-    console.log("🚀 [MELO PRO] Subscribe button clicked")
-
-    if (!session?.user?.id || !session.user.email) {
-      console.log("❌ [MELO PRO] No session user found", {
-        userId: session?.user?.id,
-        email: session?.user?.email,
-      })
+    if (!session?.user?.id) {
       Alert.alert("Sign in required", "Please log in to upgrade to Melo Pro.")
       router.push("/login")
       return
     }
 
-    console.log("✅ [MELO PRO] User validated:", {
-      user_id: session.user.id,
-      email: session.user.email,
-    })
-
     setLoading(true)
-    console.log("⏳ [MELO PRO] Loading state set to TRUE")
 
     try {
-      console.log("📡 [MELO PRO] Invoking edge function: create-pro-checkout-session")
+      if (!rcPackage) throw new Error("Subscription not loaded")
 
-      const startTime = Date.now()
+      const { customerInfo } = await Purchases.purchasePackage(rcPackage)
 
-      const { data, error } = await supabase.functions.invoke(
-        "create-pro-checkout-session",
-        {
+      const isPro =
+        customerInfo.entitlements.active["melo_marketplace_pro"]
+
+      if (isPro) {
+        await supabase.functions.invoke("grant-purchase", {
           body: {
-            user_id: session.user.id,
-            email: session.user.email,
+            productId: "melo_pro_subscription",
+            customerInfo,
           },
-        }
-      )
+        })
 
-      const endTime = Date.now()
-      console.log("🕒 [MELO PRO] Function response time:", endTime - startTime, "ms")
-
-      console.log("📦 [MELO PRO] Raw function response:", {
-        data,
-        error,
-      })
-
-      if (error) {
-        console.error("❌ [MELO PRO] Edge function error:", error)
-        throw error
+        Alert.alert("Success", "You're now Melo Pro 🎉")
+        router.replace("/profile")
+      } else {
+        throw new Error("Entitlement not active")
       }
-
-      if (!data) {
-        console.error("❌ [MELO PRO] No data returned from function")
-        throw new Error("No response from checkout function.")
-      }
-
-      if (!data?.url) {
-        console.error("❌ [MELO PRO] Missing checkout URL:", data)
-        throw new Error("Stripe session failed to return a checkout URL.")
-      }
-
-      console.log("💳 [MELO PRO] Stripe Checkout URL received:", data.url)
-
-      const canOpen = await Linking.canOpenURL(data.url)
-      console.log("🔗 [MELO PRO] Can open URL:", canOpen)
-
-      if (!canOpen) {
-        console.error("❌ [MELO PRO] Cannot open Stripe URL:", data.url)
-        throw new Error("Unable to open Stripe checkout URL.")
-      }
-
-      console.log("🌍 [MELO PRO] Redirecting to Stripe checkout...")
-      await Linking.openURL(data.url)
-      console.log("✅ [MELO PRO] Linking.openURL executed")
     } catch (err: any) {
-      console.error("🚨 [MELO PRO] Checkout crash:", err)
-      handleAppError(err, {
-        fallbackMessage:
-          err?.message ?? "Unable to start Melo Pro subscription checkout.",
-      })
+      if (!err?.userCancelled) {
+        handleAppError(err, {
+          fallbackMessage: "Unable to complete purchase.",
+        })
+      }
     } finally {
-      console.log("🔚 [MELO PRO] Finally block hit — stopping loader")
       setLoading(false)
+    }
+  }
+
+  const handleRestore = async () => {
+    try {
+      const customerInfo = await Purchases.restorePurchases()
+
+      await supabase.functions.invoke("grant-purchase", {
+        body: {
+          productId: "melo_pro_subscription",
+          customerInfo,
+        },
+      })
+
+      Alert.alert("Restored", "Your purchases have been restored")
+    } catch (e) {
+      Alert.alert("Error", "Failed to restore purchases")
     }
   }
 
@@ -122,8 +123,7 @@ export default function MeloProCheckoutScreen() {
 
         <View style={styles.priceBox}>
           <Text style={styles.priceLabel}>Melo Pro</Text>
-          <Text style={styles.price}>$24.99 / month</Text>
-          <Text style={styles.priceSub}>Cancel anytime, No Contracts</Text>
+          <Text style={styles.price}>{price} / month</Text>
         </View>
 
         <TouchableOpacity
@@ -137,9 +137,34 @@ export default function MeloProCheckoutScreen() {
           ) : (
             <>
               <Ionicons name="rocket-outline" size={18} color="#0F1E17" />
-              <Text style={styles.btnText}>Start Melo Pro Subscription</Text>
+              <Text style={styles.btnText}>
+                Start Melo Pro Subscription
+              </Text>
             </>
           )}
+        </TouchableOpacity>
+
+        <Text style={styles.disclaimer}>
+          {price}/month. Auto-renews unless canceled at least 24 hours before
+          the end of the billing period. Manage or cancel anytime in your
+          account settings.
+        </Text>
+
+        <TouchableOpacity onPress={() => router.push("/settings")}>
+          <Text style={styles.manageLink}>Manage Subscription</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={handleRestore}>
+          <Text style={styles.restoreLink}>Restore Purchases</Text>
+        </TouchableOpacity>
+
+        {/* 🔥 REQUIRED LEGAL LINKS */}
+        <TouchableOpacity onPress={() => router.push("/legal/terms")}>
+          <Text style={styles.restoreLink}>Terms of Use</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => router.push("/legal/privacy")}>
+          <Text style={styles.restoreLink}>Privacy Policy</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -206,18 +231,11 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#0F1E17",
   },
-  priceSub: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#0F1E17",
-    opacity: 0.6,
-  },
   btn: {
     marginTop: 18,
     height: 52,
     borderRadius: 16,
-    backgroundColor: "#7FAF9B", // Melo header color aligned with your theme
+    backgroundColor: "#7FAF9B",
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -228,6 +246,28 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "900",
     color: "#0F1E17",
+  },
+  disclaimer: {
+    marginTop: 14,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#0F1E17",
+    opacity: 0.65,
+    textAlign: "center",
+    lineHeight: 16,
+  },
+  manageLink: {
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#7FAF9B",
+  },
+  restoreLink: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#0F1E17",
+    opacity: 0.7,
   },
   secondaryBtn: {
     marginTop: 10,

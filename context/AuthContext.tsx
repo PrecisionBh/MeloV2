@@ -5,6 +5,9 @@ import React, { createContext, useContext, useEffect, useState } from "react"
 import { ActivityIndicator, StyleSheet, View } from "react-native"
 import { supabase } from "../lib/supabase"
 
+// ✅ NEW
+import { initRevenueCat } from "@/lib/revenuecat"
+
 type AuthContextType = {
   session: Session | null
   loading: boolean
@@ -31,7 +34,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      // ✅ Get projectId dynamically (correct way for EAS)
       const projectId =
         Constants.expoConfig?.extra?.eas?.projectId ??
         Constants.easConfig?.projectId
@@ -47,12 +49,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log("[PUSH] TOKEN:", token)
 
-      // ✅ Save to Supabase
-     await supabase
-  .from("profiles")
-  .update({ expo_push_token: token })
-  .eq("id", userId)
-
+      await supabase
+        .from("profiles")
+        .update({ expo_push_token: token })
+        .eq("id", userId)
     } catch (err: any) {
       console.log("[PUSH] Registration error:", err?.message ?? err)
     }
@@ -118,7 +118,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           registerPushToken(userId)
         }
 
-        // 🔎 Run ban check in background
+        // 🔥 NEW — INIT REVENUECAT HERE
+        if (userId) {
+          await initRevenueCat(userId)
+          console.log("🔥 RevenueCat initialized from AuthProvider")
+        }
+
+        // 🔎 BAN CHECK
         if (userId) {
           checkBanStatus(userId).then(async (isBanned) => {
             if (isBanned) {
@@ -144,9 +150,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const userId = newSession?.user?.id
 
-        // ✅ REGISTER PUSH ON LOGIN / SESSION CHANGE
+        // ✅ REGISTER PUSH
         if (userId) {
           registerPushToken(userId)
+        }
+
+        // 🔥 NEW — INIT AGAIN ON LOGIN / SESSION CHANGE
+        if (userId) {
+          await initRevenueCat(userId)
+          console.log("🔥 RevenueCat re-initialized on auth change")
         }
 
         if (userId) {

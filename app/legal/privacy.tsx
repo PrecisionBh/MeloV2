@@ -1,10 +1,10 @@
 import { useRouter } from "expo-router"
 import React from "react"
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native"
 
 import AppHeader from "@/components/app-header"
@@ -35,8 +35,7 @@ export default function PrivacyPolicyScreen() {
 
         <Section title="2. Information We Collect">
           <Text style={styles.text}>
-            When you use Melo, we may collect certain information
-            including:
+            When you use Melo, we may collect certain information including:
           </Text>
 
           <Text style={styles.list}>
@@ -151,6 +150,57 @@ export default function PrivacyPolicyScreen() {
           </Text>
         </Section>
 
+        {/* 🔥 REQUIRED ADDITIONS */}
+
+        <Section title="12. Your Rights">
+          <Text style={styles.text}>
+            You have the right to access, update, or delete your personal information.
+          </Text>
+
+          <Text style={styles.text}>
+            You may request account deletion at any time through the app or by contacting support.
+          </Text>
+
+          <Text style={styles.text}>
+            We will respond to data requests in accordance with applicable laws.
+          </Text>
+        </Section>
+
+        <Section title="13. Data Retention">
+          <Text style={styles.text}>
+            Melo retains user information only as long as necessary to provide services,
+            comply with legal obligations, resolve disputes, and enforce agreements.
+          </Text>
+        </Section>
+
+        <Section title="14. Third-Party Services">
+          <Text style={styles.text}>
+            Melo uses third-party services including payment processors, hosting providers,
+            and analytics tools to operate the platform.
+          </Text>
+
+          <Text style={styles.text}>
+            These providers may process data in accordance with their own privacy policies.
+          </Text>
+        </Section>
+
+        <Section title="15. Tracking and Analytics">
+          <Text style={styles.text}>
+            Melo may use limited analytics or diagnostic tools to improve app performance.
+          </Text>
+
+          <Text style={styles.text}>
+            Melo does not use invasive tracking or sell user data for advertising purposes.
+          </Text>
+        </Section>
+
+        <Section title="16. Regional Privacy Rights">
+          <Text style={styles.text}>
+            Depending on your location, you may have additional rights under laws such as
+            the California Consumer Privacy Act (CCPA) or General Data Protection Regulation (GDPR).
+          </Text>
+        </Section>
+
         <Text style={styles.footer}>
           Last updated: {new Date().getFullYear()}
         </Text>
@@ -158,8 +208,6 @@ export default function PrivacyPolicyScreen() {
     </View>
   )
 }
-
-/* COMPONENT */
 
 function Section({
   title,
@@ -175,8 +223,6 @@ function Section({
     </View>
   )
 }
-
-/* STYLES */
 
 const styles = StyleSheet.create({
   screen: {

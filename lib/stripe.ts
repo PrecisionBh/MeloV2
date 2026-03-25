@@ -16,7 +16,7 @@ export function ensureStripeInitialized() {
 
   initStripe({
     publishableKey: key,
-    merchantIdentifier: "merchant.com.melo.marketplace",
+    // ❌ REMOVED merchantIdentifier (this was triggering Apple Pay)
     urlScheme: "melomp",
   })
 

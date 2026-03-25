@@ -10,6 +10,8 @@ import {
   View,
 } from "react-native"
 
+import Purchases from "react-native-purchases"
+
 import AppHeader from "@/components/app-header"
 import { handleAppError } from "../lib/errors/appError"
 import { supabase } from "../lib/supabase"
@@ -17,6 +19,46 @@ import { supabase } from "../lib/supabase"
 export default function SettingsScreen() {
   const router = useRouter()
   const [loggingOut, setLoggingOut] = useState(false)
+
+  /* ---------------- RESTORE ---------------- */
+  const handleRestore = async () => {
+    Alert.alert(
+      "Restore Purchases",
+      "This will restore your Melo Pro subscription and any previous purchases tied to your account.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Restore",
+          onPress: async () => {
+            try {
+              console.log("🔁 Restoring purchases...")
+
+              const customerInfo = await Purchases.restorePurchases()
+
+              console.log("✅ Restore result:", customerInfo)
+
+              await supabase.functions.invoke("grant-purchase", {
+                body: {
+                  productId: "melo_pro_subscription",
+                  customerInfo,
+                },
+              })
+
+              Alert.alert(
+                "Restored",
+                "Your purchases have been successfully restored."
+              )
+            } catch (e) {
+              console.error("❌ Restore error:", e)
+              Alert.alert("Error", "Failed to restore purchases")
+            }
+          },
+        },
+      ]
+    )
+  }
+
+  /* ---------------- LOGOUT ---------------- */
 
   const handleLogout = () => {
     if (loggingOut) return
@@ -37,15 +79,13 @@ export default function SettingsScreen() {
     try {
       setLoggingOut(true)
 
-      // 🔒 FIRST: immediately navigate away from protected screens
-      router.replace("/signinscreen")
-
-      // 🔒 SECOND: sign out AFTER navigation so mounted screens unmount cleanly
       const { error } = await supabase.auth.signOut()
 
       if (error) {
         throw error
       }
+
+      router.replace("/home")
     } catch (err) {
       handleAppError(err, {
         fallbackMessage:
@@ -88,12 +128,11 @@ export default function SettingsScreen() {
           onPress={() => router.push("/manage-subscription")}
         />
 
-        {/* 🔥 NEW DELETE ACCOUNT BUTTON */}
+        {/* RESTORE PURCHASES */}
         <SettingsItem
-          icon="trash-outline"
-          label="Delete Account"
-          onPress={() => router.push("/settings/delete-account")}
-          danger
+          icon="refresh-outline"
+          label="Restore Purchases"
+          onPress={handleRestore}
         />
       </View>
 
@@ -108,7 +147,7 @@ export default function SettingsScreen() {
         />
       </View>
 
-      {/* LOGOUT */}
+      {/* FOOTER ACTIONS */}
       <View style={styles.content}>
         <TouchableOpacity
           style={[styles.logoutBtn, loggingOut && { opacity: 0.6 }]}
@@ -124,6 +163,14 @@ export default function SettingsScreen() {
               <Text style={styles.logoutText}>Log out</Text>
             </>
           )}
+        </TouchableOpacity>
+
+        {/* 🔥 DELETE ACCOUNT (MOVED HERE) */}
+        <TouchableOpacity
+          style={styles.deleteTextBtn}
+          onPress={() => router.push("/settings/delete-account")}
+        >
+          <Text style={styles.deleteText}>Delete Account</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -220,5 +267,18 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "800",
     fontSize: 15,
+  },
+
+  /* 🔥 DELETE ACCOUNT (FOOTER STYLE) */
+  deleteTextBtn: {
+    marginTop: 14,
+    alignItems: "center",
+  },
+
+  deleteText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#C0392B",
+    opacity: 0.8,
   },
 })

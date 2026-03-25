@@ -1,20 +1,20 @@
 import { Ionicons } from "@expo/vector-icons"
-import * as Linking from "expo-linking"
 import { useRouter } from "expo-router"
 import { useEffect, useMemo, useState } from "react"
 import {
   Alert,
   Dimensions,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native"
 
+import { getOfferings } from "@/lib/revenuecat"
+import Purchases from "react-native-purchases"
+
 import AppHeader from "@/components/app-header"
-import { purchaseItem } from "@/lib/iap"
 import { supabase } from "@/lib/supabase"
 
 const { width } = Dimensions.get("window")
@@ -101,6 +101,9 @@ export default function PackagesScreen() {
 
   const [buyingId, setBuyingId] = useState<string | null>(null)
 
+  // ✅ NEW
+  const [rcPackages, setRcPackages] = useState<any[]>([])
+
   useEffect(() => {
     const load = async () => {
       setLoading(true)
@@ -130,6 +133,13 @@ export default function PackagesScreen() {
         setIsPro(!!data?.is_pro)
         setBoostsRemaining(Number(data?.boosts_remaining ?? 0))
         setMegaRemaining(Number(data?.mega_boosts_remaining ?? 0))
+
+        // ✅ NEW (RevenueCat)
+        const offering = await getOfferings()
+        if (offering) {
+          setRcPackages(offering.availablePackages)
+        }
+
       } catch {
         setIsPro(false)
         setBoostsRemaining(0)
@@ -157,6 +167,7 @@ export default function PackagesScreen() {
     router.push("/melo-pro")
   }
 
+  // ✅ FULLY UPDATED
   const handleBuyPack = async (packId: string) => {
     if (!userId) {
       router.push("/login")
@@ -164,50 +175,51 @@ export default function PackagesScreen() {
     }
 
     if (!isPro) {
-      Alert.alert(
-        "Melo Pro Required",
-        "Boost Packs are exclusive to Melo Pro sellers. Upgrade to unlock boosts, mega boosts, and lower fees."
-      )
-      router.push("/melo-pro")
-      return
-    }
+  Alert.alert(
+    "Melo Pro Required",
+    "Boost Packs are exclusive to Melo Pro sellers."
+  )
+  router.push("/melo-pro")
+  return
+}
 
-    try {
-      setBuyingId(packId)
+try {
+  setBuyingId(packId)
 
-      // 🔥 iOS → Apple IAP
-      if (Platform.OS === "ios") {
-        await purchaseItem(packId)
-        return
-      }
+  const selectedPackage = rcPackages.find(
+    (pkg) => pkg.product.identifier === packId
+  )
 
-      // 🔥 Android/Web → Stripe (unchanged)
-      const { data, error } = await supabase.functions.invoke(
-        "create-boost-checkout",
-        {
-          body: {
-            userId,
-            packageId: packId,
-          },
-        }
-      )
+  console.log("📦 Available packages:", rcPackages)
+  console.log("🎯 Selected package:", selectedPackage)
 
-      if (error) throw error
-
-      if (data?.url) {
-        await Linking.openURL(data.url)
-      } else {
-        throw new Error("No checkout URL returned")
-      }
-    } catch (e: any) {
-      Alert.alert("Error", e?.message ?? "Purchase failed")
-    } finally {
-      setBuyingId(null)
-    }
+  if (!selectedPackage) {
+    Alert.alert("Error", "Product not loaded yet")
+    return
   }
 
+  // 🔥 PURCHASE (ONLY ONCE)
+  const { customerInfo } = await Purchases.purchasePackage(selectedPackage)
 
-  return (
+  // 🔒 SEND VERIFIED DATA TO BACKEND
+  await supabase.functions.invoke("grant-purchase", {
+    body: {
+      productId: packId,
+      customerInfo,
+    },
+  })
+
+  Alert.alert("Success", "Pack added 🚀")
+} catch (e: any) {
+  if (!e?.userCancelled) {
+    Alert.alert("Error", e?.message ?? "Purchase failed")
+  }
+} finally {
+  setBuyingId(null)
+}
+}
+
+ return (
   <View style={styles.screen}>
     <AppHeader title="Boost Store" backLabel="Back" backRoute="/seller-hub" />
 
@@ -255,7 +267,6 @@ export default function PackagesScreen() {
           more clicks, more offers, and faster sales.
         </Text>
 
-        {/* FEATURE CARDS */}
         <View style={styles.featureRow}>
           <FeatureCard
             icon="rocket"
@@ -362,8 +373,6 @@ export default function PackagesScreen() {
   </View>
 )
 }
-
-/* ---------------- SMALL COMPONENTS ---------------- */
 
 function FeatureCard({
   icon,
@@ -697,14 +706,10 @@ packPriceLarge: {
     lineHeight: 16,
   },
 
-  grid: {
-    marginTop: 10,
-    marginHorizontal: 16,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 12,
-  },
+ grid: {
+  marginTop: 10,
+  marginHorizontal: 16,
+},
 
   boostAccentBorder: {
     borderColor: "rgba(127,175,155,0.28)",

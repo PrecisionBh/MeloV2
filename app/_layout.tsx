@@ -21,11 +21,11 @@ function AuthGate() {
       segments[0] === "verify-otp" ||
       segments[0] === "reset-password"
 
-    if (!session && !inAuthGroup) {
-      router.replace("/signinscreen")
-    } else if (session && inAuthGroup) {
+    // ✅ ONLY redirect logged-in users away from auth screens
+    if (session && inAuthGroup) {
       router.replace("/home")
     }
+
   }, [session, segments, loading])
 
   if (loading) {
@@ -46,10 +46,10 @@ export default function RootLayout() {
         publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!}
       >
         <AuthProvider>
-          {/* ✅ THIS RUNS LOGIC */}
+          {/* ✅ Auth logic (fixed) */}
           <AuthGate />
 
-          {/* ✅ THIS RENDERS SCREENS */}
+          {/* ✅ App screens */}
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="signinscreen" />

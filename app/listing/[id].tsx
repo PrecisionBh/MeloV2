@@ -43,6 +43,7 @@ export default function ListingDetailScreen() {
   const router = useRouter()
   const { id, scrollY } = useLocalSearchParams<{ id: string; scrollY?: string }>()
   const { session } = useAuth()
+  const [showAuthModal, setShowAuthModal] = useState(false)
 
   const [listing, setListing] = useState<Listing | null>(null)
   const [loading, setLoading] = useState(true)
@@ -57,6 +58,15 @@ export default function ListingDetailScreen() {
 
   const [liked, setLiked] = useState(false)
   const [likesCount, setLikesCount] = useState(0)
+
+  const requireAuth = (action?: () => void) => {
+  if (!session?.user) {
+    setShowAuthModal(true)
+    return
+  }
+
+  action?.()
+}
 
   /* ---------------- EFFECTS ---------------- */
 
@@ -261,7 +271,10 @@ export default function ListingDetailScreen() {
 
   const toggleWatch = async () => {
     try {
-      if (!session?.user || !listing) return
+      if (!session?.user || !listing) {
+  setShowAuthModal(true)
+  return
+}
 
       if (liked) {
         const { error } = await supabase
@@ -291,13 +304,16 @@ export default function ListingDetailScreen() {
   }
 
   /* ✅ VIEW PUBLIC PROFILE BUTTON */
-  const handleViewPublicProfile = () => {
+ const handleViewPublicProfile = () => {
+  requireAuth(() => {
     if (!listing?.user_id) return
+
     router.push({
       pathname: "/public-profile/[userId]",
       params: { userId: listing.user_id },
     })
-  }
+  })
+}
 
   /* ---------------- RENDER ---------------- */
 
@@ -365,17 +381,21 @@ export default function ListingDetailScreen() {
           allowOffers={listing.allow_offers}
           onToggleWatch={toggleWatch}
           onMakeOffer={() =>
-            router.push({
-              pathname: "/make-offer",
-              params: { listingId: listing.id },
-            })
-          }
+  requireAuth(() =>
+    router.push({
+      pathname: "/make-offer",
+      params: { listingId: listing.id },
+    })
+  )
+}
           onBuyNow={() =>
-            router.push({
-              pathname: "/checkout",
-              params: { listingId: listing.id },
-            })
-          }
+  requireAuth(() =>
+    router.push({
+      pathname: "/checkout",
+      params: { listingId: listing.id },
+    })
+  )
+}
         />
 
         {/* ✅ NEW: VIEW PUBLIC PROFILE BUTTON */}
@@ -402,7 +422,9 @@ export default function ListingDetailScreen() {
         {!isSeller && (
           <View style={styles.messageRow}>
             <TouchableOpacity
-              onPress={handleMessageSeller}
+              onPress={() =>
+  requireAuth(() => handleMessageSeller())
+}
               style={styles.messageSellerButton}
               activeOpacity={0.85}
             >
@@ -439,6 +461,42 @@ export default function ListingDetailScreen() {
           </ScrollView>
         </View>
       </Modal>
+
+      {showAuthModal && (
+  <View style={styles.authOverlay}>
+    <View style={styles.authModal}>
+      <Text style={styles.authTitle}>
+        Sign in to continue
+      </Text>
+
+      <TouchableOpacity
+        style={styles.authBtn}
+        onPress={() => {
+          setShowAuthModal(false)
+          router.push("/signinscreen")
+        }}
+      >
+        <Text style={styles.authBtnText}>Sign In</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.authBtnOutline}
+        onPress={() => {
+          setShowAuthModal(false)
+          router.push("/register")
+        }}
+      >
+        <Text style={styles.authBtnOutlineText}>
+          Create Account
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => setShowAuthModal(false)}>
+        <Text style={styles.authCancel}>Not now</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+)}
     </View>
   )
 }
@@ -525,4 +583,62 @@ const styles = StyleSheet.create({
     height: "100%",
     resizeMode: "contain",
   },
+
+  authOverlay: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: "rgba(0,0,0,0.4)",
+  justifyContent: "center",
+  alignItems: "center",
+},
+
+authModal: {
+  width: "85%",
+  backgroundColor: "#fff",
+  borderRadius: 20,
+  padding: 20,
+  alignItems: "center",
+},
+
+authTitle: {
+  fontSize: 18,
+  fontWeight: "800",
+  marginBottom: 16,
+},
+
+authBtn: {
+  width: "100%",
+  backgroundColor: "#7FAF9B",
+  padding: 14,
+  borderRadius: 12,
+  alignItems: "center",
+  marginBottom: 10,
+},
+
+authBtnText: {
+  color: "#0F1E17",
+  fontWeight: "800",
+},
+
+authBtnOutline: {
+  width: "100%",
+  borderWidth: 1,
+  borderColor: "#7FAF9B",
+  padding: 14,
+  borderRadius: 12,
+  alignItems: "center",
+},
+
+authBtnOutlineText: {
+  color: "#7FAF9B",
+  fontWeight: "800",
+},
+
+authCancel: {
+  marginTop: 12,
+  color: "#999",
+},
 })
