@@ -2,7 +2,7 @@
   "expo": {
     "name": "Melo",
     "slug": "Melo-MP",
-    "version": "1.0.16",
+    "version": "1.0.17",
     "orientation": "portrait",
     "scheme": "melomp",
     "userInterfaceStyle": "automatic",
@@ -52,7 +52,10 @@
         }
       ],
       "expo-secure-store",
-      "@stripe/stripe-react-native"
+      [
+        "@stripe/stripe-react-native",
+        {}
+      ]
     ],
 
     "experiments": {
