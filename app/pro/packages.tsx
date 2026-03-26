@@ -103,6 +103,26 @@ export default function PackagesScreen() {
 
   // ✅ NEW
   const [rcPackages, setRcPackages] = useState<any[]>([])
+ const getPriceForPack = (packId: string) => {
+  const pkg = rcPackages.find(
+    (p) => p.product.identifier === packId
+  )
+
+  return pkg?.product?.priceString ?? ""
+}
+
+useEffect(() => {
+  if (rcPackages.length > 0) {
+    console.log("🔍 PRICE MAP:", rcPackages.map(p => ({
+      id: p.product.identifier,
+      price: p.product.priceString
+    })))
+
+    console.log("TEST boost_pack_3:", getPriceForPack("boost_pack_3"))
+    console.log("TEST boost_pack_10:", getPriceForPack("boost_pack_10"))
+    console.log("TEST mega_boost_1:", getPriceForPack("mega_boost_1"))
+  }
+}, [rcPackages])
 
   useEffect(() => {
     const load = async () => {
@@ -315,12 +335,14 @@ try {
         <View style={styles.row}>
           <PackCard
             pack={BOOST_PACKS[0]}
+            price={getPriceForPack(BOOST_PACKS[0].id)}
             locked={!isPro}
             loading={buyingId === BOOST_PACKS[0].id}
             onPress={() => handleBuyPack(BOOST_PACKS[0].id)}
           />
           <PackCard
             pack={BOOST_PACKS[1]}
+            price={getPriceForPack(BOOST_PACKS[1].id)}
             locked={!isPro}
             loading={buyingId === BOOST_PACKS[1].id}
             onPress={() => handleBuyPack(BOOST_PACKS[1].id)}
@@ -329,6 +351,7 @@ try {
 
         <PackCard
           pack={BOOST_PACKS[2]}
+          price={getPriceForPack(BOOST_PACKS[2].id)}
           locked={!isPro}
           loading={buyingId === BOOST_PACKS[2].id}
           onPress={() => handleBuyPack(BOOST_PACKS[2].id)}
@@ -347,12 +370,14 @@ try {
         <View style={styles.row}>
           <PackCard
             pack={MEGA_PACKS[0]}
+            price={getPriceForPack(MEGA_PACKS[0].id)}
             locked={!isPro}
             loading={buyingId === MEGA_PACKS[0].id}
             onPress={() => handleBuyPack(MEGA_PACKS[0].id)}
           />
           <PackCard
             pack={MEGA_PACKS[1]}
+            price={getPriceForPack(MEGA_PACKS[1].id)}
             locked={!isPro}
             loading={buyingId === MEGA_PACKS[1].id}
             onPress={() => handleBuyPack(MEGA_PACKS[1].id)}
@@ -361,6 +386,7 @@ try {
 
         <PackCard
           pack={MEGA_PACKS[2]}
+          price={getPriceForPack(MEGA_PACKS[2].id)}
           locked={!isPro}
           loading={buyingId === MEGA_PACKS[2].id}
           onPress={() => handleBuyPack(MEGA_PACKS[2].id)}
@@ -426,17 +452,21 @@ function SectionHeader({
 }
 function PackCard({
   pack,
+  price,
   locked,
   loading,
   onPress,
   fullWidth = false,
 }: {
   pack: Pack
+  price: string
   locked: boolean
   loading: boolean
   onPress: () => void
   fullWidth?: boolean
-}) {
+})
+
+{
   const accent =
     pack.accent === "mega"
       ? styles.megaAccentBorder
@@ -455,13 +485,13 @@ function PackCard({
 
       <View style={styles.packPriceRow}>
         <Text
-          style={[
-            styles.packPrice,
-            fullWidth && styles.packPriceLarge,
-          ]}
-        >
-          {pack.priceLabel}
-        </Text>
+  style={[
+    styles.packPrice,
+    fullWidth && styles.packPriceLarge,
+  ]}
+>
+  {price || "—"}
+</Text>
 
         <View style={styles.creditsPill}>
           <Ionicons
