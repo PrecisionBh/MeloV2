@@ -1,10 +1,18 @@
 import { StripeProvider } from "@stripe/stripe-react-native"
 import { Stack, useRouter, useSegments } from "expo-router"
 import { useEffect } from "react"
-import { ActivityIndicator, View } from "react-native"
+import {
+  ActivityIndicator,
+  I18nManager,
+  View,
+} from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 
 import { AuthProvider, useAuth } from "../context/AuthContext"
+
+/* 🔥 FORCE LTR (GLOBAL FIX) */
+I18nManager.allowRTL(false)
+I18nManager.forceRTL(false)
 
 function AuthGate() {
   const { session, loading } = useAuth()
@@ -25,7 +33,6 @@ function AuthGate() {
     if (session && inAuthGroup) {
       router.replace("/home")
     }
-
   }, [session, segments, loading])
 
   if (loading) {
@@ -46,7 +53,7 @@ export default function RootLayout() {
         publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!}
       >
         <AuthProvider>
-          {/* ✅ Auth logic (fixed) */}
+          {/* ✅ Auth logic */}
           <AuthGate />
 
           {/* ✅ App screens */}

@@ -451,6 +451,9 @@ const checkUnreadMessages = async () => {
     })
   }, [listings, activeCategory, activeSport, search])
 
+  const hasSearch = search.trim().length > 0
+const hasResults = filteredListings.length > 0
+
   /* ---------------- RENDER ---------------- */
 
   return (
@@ -491,17 +494,30 @@ onProfilePress={() =>
         </View>
 
         {loading ? (
-          <ActivityIndicator style={{ marginTop: 40 }} />
-        ) : (
-          <ListingsGrid
-            listings={filteredListings}
-            refreshing={refreshing}
-            onRefresh={refreshListings}
-            showUpgradeRow={!isPro}
-            megaBoostListings={megaBoostListings}
-            onScrollOffsetChange={setScrollOffset}
-          />
-        )}
+  <ActivityIndicator style={{ marginTop: 40 }} />
+) : (
+  <>
+    {search.trim().length > 0 && filteredListings.length === 0 && (
+      <View style={styles.noResultsWrap}>
+        <Text style={styles.noResultsTitle}>
+          No results for "{search}"
+        </Text>
+        <Text style={styles.noResultsSub}>
+          Showing featured listings instead
+        </Text>
+      </View>
+    )}
+
+    <ListingsGrid
+      listings={filteredListings}
+      refreshing={refreshing}
+      onRefresh={refreshListings}
+      showUpgradeRow={!isPro}
+      megaBoostListings={megaBoostListings}
+      onScrollOffsetChange={setScrollOffset}
+    />
+  </>
+)}
 
         <TouchableOpacity
           style={styles.fab}
@@ -797,4 +813,22 @@ authCancel: {
   marginTop: 12,
   color: "#999",
 },
+
+noResultsWrap: {
+  paddingHorizontal: 16,
+  paddingTop: 12,
+},
+
+noResultsTitle: {
+  fontSize: 16,
+  fontWeight: "700",
+  color: "#0F1E17",
+},
+
+noResultsSub: {
+  fontSize: 13,
+  color: "#6B7280",
+  marginTop: 4,
+},
+
 })

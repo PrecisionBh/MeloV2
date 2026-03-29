@@ -3,6 +3,7 @@
 import AppHeader from "@/components/app-header"
 import CategoryBrandConditionSection from "@/components/create-listing/CategoryBrandConditionSection"
 import CreateListingFooter from "@/components/create-listing/CreateListingFooter"
+import FullScreenSelector from "@/components/create-listing/FullScreenSelector"
 import ImageUpload from "@/components/create-listing/ImageUpload"
 import PriceOffersSection from "@/components/create-listing/PriceOffersSection"
 import ProFeaturesSection from "@/components/create-listing/ProFeaturesSection"
@@ -340,10 +341,10 @@ const id = Array.isArray(params.id) ? params.id[0] : params.id
   const [images, setImages] = useState<string[]>([])
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [sportType, setSportType] = useState<string | null>("billiards")
-  const [category, setCategory] = useState<string | null>(null)
-  const [brand, setBrand] = useState<string | null>(null)
-  const [condition, setCondition] = useState<string | null>(null)
+const [sportType, setSportType] = useState<string>("")
+const [category, setCategory] = useState<string>("")
+const [brand, setBrand] = useState<string>("")
+const [condition, setCondition] = useState<string>("")
 
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [showBrandModal, setShowBrandModal] = useState(false)
@@ -384,10 +385,15 @@ const id = Array.isArray(params.id) ? params.id[0] : params.id
       ? SPORT_BRAND_MAP[sportType]
       : []
 
-  useEffect(() => {
-    setCategory(null)
-    setBrand(null)
-  }, [sportType])
+useEffect(() => {
+  if (!sportType) return
+
+  // ONLY reset if user manually changes sport AFTER load
+  if (loadingListing) return
+
+  setCategory("")
+  setBrand("")
+}, [sportType])
 
  /* ---------------- LOAD LISTING ---------------- */
 
@@ -592,6 +598,13 @@ const handleUpdateListing = async () => {
   }
 }
 
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: "#e8e8e8" },
+  loaderWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
+  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 140 },
+  sectionSpacing: { marginTop: 18 },
+})
+
 /* ---------------- LOADING ---------------- */
 
 if (checkingAddress || loadingListing) {
@@ -633,8 +646,9 @@ return (
         brand={brand}
         condition={condition}
         conditionSubtext={
-  CONDITIONS.find(c => c.value === condition)?.subtext
-}
+          CONDITIONS.find(c => c.value === condition)?.subtext
+        }
+
         onPressSportType={() => setShowSportModal(true)}
         onPressCategory={() => setShowCategoryModal(true)}
         onPressBrand={() => setShowBrandModal(true)}
@@ -702,17 +716,61 @@ return (
       </View>
     </ScrollView>
 
+    {/* ---------------- SELECTORS (MATCH CREATE SCREEN) ---------------- */}
+
+    <FullScreenSelector
+      visible={showSportModal}
+      title="Select Sport"
+      options={SPORT_TYPES}
+      selectedValue={sportType ?? undefined}
+      onSelect={(value) => {
+        setSportType(value)
+        setShowSportModal(false)
+      }}
+      onClose={() => setShowSportModal(false)}
+    />
+
+    <FullScreenSelector
+      visible={showCategoryModal}
+      title="Select Category"
+      options={categoriesForSport}
+      selectedValue={category ?? undefined}
+      onSelect={(value) => {
+        setCategory(value)
+        setShowCategoryModal(false)
+      }}
+      onClose={() => setShowCategoryModal(false)}
+    />
+
+    <FullScreenSelector
+      visible={showBrandModal}
+      title="Select Brand"
+      options={brandsForSport}
+      selectedValue={brand ?? undefined}
+      onSelect={(value) => {
+        setBrand(value)
+        setShowBrandModal(false)
+      }}
+      onClose={() => setShowBrandModal(false)}
+    />
+
+    <FullScreenSelector
+      visible={showConditionModal}
+      title="Select Condition"
+      options={CONDITIONS}
+      selectedValue={condition ?? undefined}
+      onSelect={(value) => {
+        setCondition(value)
+        setShowConditionModal(false)
+      }}
+      onClose={() => setShowConditionModal(false)}
+    />
+
     <ReturnAddressRequiredModal
       visible={showAddressModal}
       onClose={() => setShowAddressModal(false)}
     />
+
   </View>
 )
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#e8e8e8" },
-  loaderWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
-  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 140 },
-  sectionSpacing: { marginTop: 18 },
-})

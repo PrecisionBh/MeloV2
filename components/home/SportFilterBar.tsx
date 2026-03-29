@@ -51,7 +51,7 @@ export default function SportFilterBar({ active, onChange }: Props) {
 const styles = StyleSheet.create({
   wrap: {
     backgroundColor: "#7FAF9B", // Melo header sage
-    paddingVertical: 10,
+    paddingVertical: 5,
   },
 
   row: {

@@ -40,8 +40,6 @@ type SelectorOption = {
 
 /* ---------------- SELECTOR DATA ---------------- */
 
-/* ---------------- SELECTOR DATA ---------------- */
-
 const SPORT_TYPES: SelectorOption[] = [
   { label: "Baseball", value: "baseball" },
   { label: "Billiards", value: "billiards" },
@@ -601,15 +599,21 @@ return (
       />
 
       <CategoryBrandConditionSection
-        sportType={sportType}
-        category={category}
-        brand={brand}
-        condition={condition}
-        onPressSportType={() => setShowSportModal(true)}
-        onPressCategory={() => setShowCategoryModal(true)}
-        onPressBrand={() => setShowBrandModal(true)}
-        onPressCondition={() => setShowConditionModal(true)}
-      />
+  sportType={sportType}
+  category={category}
+  brand={brand}
+  condition={condition}
+  conditionSubtext={
+    CONDITIONS.find(c => c.value === condition)?.subtext
+  }
+
+  
+  // existing
+  onPressSportType={() => setShowSportModal(true)}
+  onPressCategory={() => setShowCategoryModal(true)}
+  onPressBrand={() => setShowBrandModal(true)}
+  onPressCondition={() => setShowConditionModal(true)}
+/>
 
       <View style={styles.sectionSpacing}>
         <ProFeaturesSection

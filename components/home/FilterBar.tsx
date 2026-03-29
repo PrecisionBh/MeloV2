@@ -69,7 +69,6 @@ export default function FilterBar({
               style={[
                 styles.pill,
                 isActive && styles.activePill,
-                isActive && styles.glow,
               ]}
               onPress={() => onChange(f.key)}
               activeOpacity={0.85}
@@ -87,38 +86,40 @@ export default function FilterBar({
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: "#7FAF9B",
-    paddingVertical: 8,
-    paddingLeft: 12,
+    marginTop: 4,
+
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    height: 44,
+
+    justifyContent: "center",
+
+    // ✅ keeps pills inside rounded edges
+    overflow: "hidden",
+
+    // subtle depth like search bar
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
 
   scroll: {
     gap: 8,
-    paddingRight: 12,
+    paddingHorizontal: 12,
+    alignItems: "center",
   },
 
   pill: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F3F6F4",
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 999,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
   },
 
   activePill: {
-    backgroundColor: "#00ff88",
-  },
-
-  glow: {
-    shadowColor: "#ccff00",
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 5,
+    backgroundColor: "#7FAF9B",
   },
 
   text: {
