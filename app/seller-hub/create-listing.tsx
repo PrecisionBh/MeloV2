@@ -8,7 +8,7 @@ import PriceOffersSection from "@/components/create-listing/PriceOffersSection"
 import ShippingSection from "@/components/create-listing/ShippingSection"
 import TitleDescriptionSection from "@/components/create-listing/TitleDescriptionSection"
 import ReturnAddressRequiredModal from "@/components/modals/ReturnAddressRequiredModal"
-import UpgradeToProButton from "@/components/pro/UpgradeToProCard"
+import UpgradeToProCard from "@/components/pro/UpgradeToProCard"
 import { useAuth } from "@/context/AuthContext"
 import { handleAppError } from "@/lib/errors/appError"
 import { supabase } from "@/lib/supabase"
@@ -581,10 +581,10 @@ return (
   <AppHeader title="Create Listing" backRoute="/seller-hub" />
 
   {!checkingPro && !isPro && (
-    <UpgradeToProButton
-      style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 4 }}
-    />
-  )}
+  <UpgradeToProCard
+    style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 4 }}
+  />
+)}
 
   {hasReturnAddress && (
     <ScrollView contentContainerStyle={styles.content}>

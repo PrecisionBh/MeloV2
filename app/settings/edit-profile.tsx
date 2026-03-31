@@ -13,7 +13,7 @@ import {
 } from "react-native"
 
 import AppHeader from "@/components/app-header"
-import UpgradeToProButton from "@/components/pro/UpgradeToProCard"
+import UpgradeToProCard from "@/components/pro/UpgradeToProCard"
 import ProfileInfoCard from "@/components/profile/ProfileInfoCard"
 import ReturnAddressCard from "@/components/profile/ReturnAddressCard"
 import { useAuth } from "../../context/AuthContext"
@@ -242,7 +242,7 @@ export default function EditProfileScreen() {
 
           {!loadingPro && !isPro ? (
             <View style={{ marginTop: 12 }}>
-              <UpgradeToProButton />
+              <UpgradeToProCard/>
             </View>
           ) : null}
         </View>

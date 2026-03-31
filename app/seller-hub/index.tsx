@@ -11,10 +11,12 @@ import {
 
 import AppHeader from "@/components/app-header"
 
+import UpgradeToProCard from "@/components/pro/UpgradeToProCard"; // ✅ ADDED
 import FreeDashboardSection from "@/components/seller-hub/FreeDashboardSection"
 import ProBenefitsCard from "@/components/seller-hub/ProBenefitsCard"
 import ProDashboardSection from "@/components/seller-hub/ProDashboardSection"
-import ProTools from "@/components/seller-hub/protools"; // ✅ NEW
+import ProTools from "@/components/seller-hub/protools"
+
 import { useAuth } from "@/context/AuthContext"
 import { handleAppError } from "@/lib/errors/appError"
 import { supabase } from "@/lib/supabase"
@@ -146,6 +148,13 @@ export default function SellerHubScreen() {
           isPro={isPro}
         />
 
+        {/* 🔥 UPGRADE CARD (NEW PLACEMENT) */}
+        {!isPro && (
+          <UpgradeToProCard
+            style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 4 }}
+          />
+        )}
+
         {/* 🔥 PRO MEMBERS TITLE */}
         <View style={styles.dividerWrap}>
           <View style={styles.dividerLine} />
@@ -156,8 +165,8 @@ export default function SellerHubScreen() {
         {/* 🔥 BENEFITS */}
         <ProBenefitsCard isPro={isPro} />
 
-        {/* 🔥 PRO TOOLS (NEW LOCATION) */}
-        <ProTools isPro={isPro} />  
+        {/* 🔥 PRO TOOLS */}
+        <ProTools isPro={isPro} />
 
       </ScrollView>
 
@@ -196,10 +205,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "900",
     color: "#5F7D71",
-  },
-  upgradeButton: {
-    marginHorizontal: 16,
-    marginTop: 12,
   },
   fab: {
     position: "absolute",
