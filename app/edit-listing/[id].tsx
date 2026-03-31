@@ -6,11 +6,9 @@ import CreateListingFooter from "@/components/create-listing/CreateListingFooter
 import FullScreenSelector from "@/components/create-listing/FullScreenSelector"
 import ImageUpload from "@/components/create-listing/ImageUpload"
 import PriceOffersSection from "@/components/create-listing/PriceOffersSection"
-import ProFeaturesSection from "@/components/create-listing/ProFeaturesSection"
 import ShippingSection from "@/components/create-listing/ShippingSection"
 import TitleDescriptionSection from "@/components/create-listing/TitleDescriptionSection"
 import ReturnAddressRequiredModal from "@/components/modals/ReturnAddressRequiredModal"
-import UpgradeToProButton from "@/components/pro/UpgradeToProButton"
 import { useAuth } from "@/context/AuthContext"
 import { handleAppError } from "@/lib/errors/appError"
 import { supabase } from "@/lib/supabase"
@@ -21,6 +19,8 @@ import {
   Alert,
   ScrollView,
   StyleSheet,
+  Text,
+  TouchableOpacity,
   View,
 } from "react-native"
 
@@ -353,6 +353,8 @@ const [condition, setCondition] = useState<string>("")
 
   const [isBoosted, setIsBoosted] = useState(false)
   const [isMegaBoosted, setIsMegaBoosted] = useState(false)
+  const [originalBoosted, setOriginalBoosted] = useState(false)
+const [originalMegaBoosted, setOriginalMegaBoosted] = useState(false)
 
   const [quantity, setQuantity] = useState("1")
 
@@ -372,9 +374,6 @@ const [condition, setCondition] = useState<string>("")
   const [hasReturnAddress, setHasReturnAddress] = useState(false)
   const [showAddressModal, setShowAddressModal] = useState(false)
 
-  const [checkingPro, setCheckingPro] = useState(true)
-  const [isPro, setIsPro] = useState(false)
-
   const categoriesForSport =
     sportType && SPORT_CATEGORY_MAP[sportType]
       ? SPORT_CATEGORY_MAP[sportType]
@@ -384,16 +383,6 @@ const [condition, setCondition] = useState<string>("")
     sportType && SPORT_BRAND_MAP[sportType]
       ? SPORT_BRAND_MAP[sportType]
       : []
-
-useEffect(() => {
-  if (!sportType) return
-
-  // ONLY reset if user manually changes sport AFTER load
-  if (loadingListing) return
-
-  setCategory("")
-  setBrand("")
-}, [sportType])
 
  /* ---------------- LOAD LISTING ---------------- */
 
@@ -405,13 +394,11 @@ useEffect(() => {
   const loadGuards = async () => {
     if (!session?.user) {
       setCheckingAddress(false)
-      setCheckingPro(false)
       return
     }
 
     try {
       setCheckingAddress(true)
-      setCheckingPro(true)
 
       // ✅ MATCH CREATE LISTING (FIX)
       const { data: addressData } = await supabase
@@ -423,16 +410,14 @@ useEffect(() => {
       setHasReturnAddress(!!addressData)
       setShowAddressModal(!addressData)
 
-      // ✅ PRO DATA
       const { data: profile } = await supabase
-        .from("profiles")
-        .select("is_pro, boosts_remaining, mega_boosts_remaining")
-        .eq("id", session.user.id)
-        .single()
+  .from("profiles")
+  .select("boosts_remaining, mega_boosts_remaining")
+  .eq("id", session.user.id)
+  .single()
 
-      setIsPro(!!profile?.is_pro)
-      setBoostsRemaining(profile?.boosts_remaining ?? 0)
-      setMegaBoostsRemaining(profile?.mega_boosts_remaining ?? 0)
+setBoostsRemaining(profile?.boosts_remaining ?? 0)
+setMegaBoostsRemaining(profile?.mega_boosts_remaining ?? 0)
 
     } catch (err) {
       console.log("Edit guard error:", err)
@@ -440,13 +425,11 @@ useEffect(() => {
       // fallback (prevents blank screen)
       setHasReturnAddress(false)
       setShowAddressModal(true)
-      setIsPro(false)
       setBoostsRemaining(0)
       setMegaBoostsRemaining(0)
 
     } finally {
       setCheckingAddress(false)
-      setCheckingPro(false)
     }
   }
 
@@ -467,10 +450,10 @@ const loadListing = async () => {
 
     setTitle(data.title ?? "")
     setDescription(data.description ?? "")
-    setSportType(data.sport_type ?? "billiards")
-    setBrand(data.brand ?? null)
-    setCategory(data.category ?? null)
-    setCondition(data.condition ?? null)
+    setSportType(data.sport_type ?? "")
+    setBrand(data.brand ?? "")
+    setCategory(data.category ?? "")
+    setCondition(data.condition ?? "")
 
     setPrice(data.price ? String(data.price) : "")
     setAllowOffers(!!data.allow_offers)
@@ -483,6 +466,8 @@ const loadListing = async () => {
 
     setIsBoosted(Boolean(data.is_boosted))
     setIsMegaBoosted(Boolean(data.is_mega_boost))
+    setOriginalBoosted(Boolean(data.is_boosted))  
+setOriginalMegaBoosted(Boolean(data.is_mega_boost))
 
     const safeLoadedQty =
       data.quantity && data.quantity > 0 ? data.quantity : 1
@@ -514,9 +499,7 @@ const handleUpdateListing = async () => {
     const parsedShippingPrice = shippingPrice ? parseFloat(shippingPrice) : 0
 
     const rawQty = parseInt(quantity, 10)
-    const safeQuantity = isPro
-      ? Math.max(1, Number.isFinite(rawQty) ? rawQty : 1)
-      : 1
+  const safeQuantity = Math.max(1, Number.isFinite(rawQty) ? rawQty : 1)
 
     if (isNaN(parsedPrice)) {
       Alert.alert("Invalid Price", "Please enter a valid price.")
@@ -584,8 +567,36 @@ const handleUpdateListing = async () => {
 
     if (error) throw error
 
-    Alert.alert("Success", "Listing updated successfully!")
-    router.back()
+    if (id) {
+  try {
+    if (originalBoosted || originalMegaBoosted) {
+  console.log("Already boosted — skipping")
+} else if (isMegaBoosted) {
+  const { error: megaError } = await supabase.rpc("mega_boost_listing", {
+    listing_id: id,
+    user_id: session.user.id,
+  })
+
+  if (megaError) {
+    console.warn("Mega Boost failed:", megaError.message)
+  }
+} else if (isBoosted) {
+  const { error: boostError } = await supabase.rpc("boost_listing", {
+    listing_id: id,
+    user_id: session.user.id,
+  })
+
+  if (boostError) {
+    console.warn("Boost failed:", boostError.message)
+  }
+}
+  } catch (err) {
+    console.warn("Boost RPC error:", err)
+  }
+}
+
+Alert.alert("Success", "Listing updated successfully!")
+router.back()
 
   } catch (err) {
     handleAppError(err, {
@@ -600,9 +611,94 @@ const handleUpdateListing = async () => {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#e8e8e8" },
-  loaderWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
-  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 140 },
-  sectionSpacing: { marginTop: 18 },
+
+  loaderWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 140,
+  },
+
+  sectionSpacing: {
+    marginTop: 18,
+  },
+
+  /* 🔥 BOOST SECTION */
+
+  boostSectionWrap: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 14,
+  },
+
+  boostHeader: {
+    fontSize: 16,
+    fontWeight: "900",
+    marginBottom: 6,
+  },
+
+  boostCounterRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+
+  boostCounter: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#7FAF9B",
+  },
+
+  boostSub: {
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 12,
+  },
+
+  boostRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+
+  boostOption: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    backgroundColor: "#fff",
+  },
+
+  boostOptionActive: {
+    borderColor: "#7FAF9B",
+    backgroundColor: "#EAF4EF",
+  },
+
+  boostOptionTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+
+  boostOptionDesc: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 4,
+    textAlign: "center",
+  },
+
+  boostLink: {
+    marginTop: 10,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#7FAF9B",
+    textAlign: "center",
+  },
 })
 
 /* ---------------- LOADING ---------------- */
@@ -618,17 +714,18 @@ if (checkingAddress || loadingListing) {
   )
 }
 
+const showAlreadyBoosted = () => {
+  Alert.alert(
+    "Already Boosted",
+    "This listing is already boosted. Please wait until the boost period ends to boost again."
+  )
+}
+
 /* ---------------- UI ---------------- */
 
 return (
   <View style={styles.screen}>
     <AppHeader title="Edit Listing" backRoute="/seller-hub" />
-
-    {!checkingPro && !isPro && (
-      <UpgradeToProButton
-        style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 4 }}
-      />
-    )}
 
     <ScrollView contentContainerStyle={styles.content}>
       <ImageUpload images={images} setImages={setImages} max={5} />
@@ -648,32 +745,87 @@ return (
         conditionSubtext={
           CONDITIONS.find(c => c.value === condition)?.subtext
         }
-
         onPressSportType={() => setShowSportModal(true)}
         onPressCategory={() => setShowCategoryModal(true)}
         onPressBrand={() => setShowBrandModal(true)}
         onPressCondition={() => setShowConditionModal(true)}
       />
 
+      {/* 🔥 BOOST SECTION (UPDATED) */}
       <View style={styles.sectionSpacing}>
-        <ProFeaturesSection
-          isPro={isPro}
-          boostsRemaining={boostsRemaining}
-          megaBoostsRemaining={megaBoostsRemaining}
-          isBoosted={isBoosted}
-          setIsBoosted={(val: boolean) => {
-            setIsBoosted(val)
-            if (val) setIsMegaBoosted(false)
-          }}
-          isMegaBoosted={isMegaBoosted}
-          setIsMegaBoosted={(val: boolean) => {
-            setIsMegaBoosted(val)
-            if (val) setIsBoosted(false)
-          }}
-          megaBoostDescription="Take over the home page in one listing."
-          quantity={quantity}
-          setQuantity={setQuantity}
-        />
+        <View style={styles.boostSectionWrap}>
+
+          <Text style={styles.boostHeader}>Boost Your Listing</Text>
+
+          <View style={styles.boostCounterRow}>
+            <Text style={styles.boostCounter}>
+              ⚡ {boostsRemaining} Boosts
+            </Text>
+            <Text style={styles.boostCounter}>
+              🔥 {megaBoostsRemaining} Mega
+            </Text>
+          </View>
+
+          <Text style={styles.boostSub}>
+            Boost your listing to get more views and sell faster.
+          </Text>
+
+          <View style={styles.boostRow}>
+            <TouchableOpacity
+              style={[
+                styles.boostOption,
+                isBoosted && styles.boostOptionActive,
+              ]}
+              onPress={() => {
+  if (originalBoosted || originalMegaBoosted) {
+    showAlreadyBoosted()
+    return
+  }
+
+  setIsBoosted(true)
+  setIsMegaBoosted(false)
+}}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.boostOptionTitle}>Boost</Text>
+              <Text style={styles.boostOptionDesc}>
+                Top placement for 7 days
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.boostOption,
+                isMegaBoosted && styles.boostOptionActive,
+              ]}
+             onPress={() => {
+  if (originalBoosted || originalMegaBoosted) {
+    showAlreadyBoosted()
+    return
+  }
+
+  setIsMegaBoosted(true)
+  setIsBoosted(false)
+}}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.boostOptionTitle}>Mega Boost</Text>
+              <Text style={styles.boostOptionDesc}>
+                Full spotlight for 14 days
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => router.push("/pro/packages")}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.boostLink}>
+              🚀 Need more boosts? Get them →
+            </Text>
+          </TouchableOpacity>
+
+        </View>
       </View>
 
       <View style={styles.sectionSpacing}>
@@ -716,7 +868,7 @@ return (
       </View>
     </ScrollView>
 
-    {/* ---------------- SELECTORS (MATCH CREATE SCREEN) ---------------- */}
+    {/* ---------------- SELECTORS ---------------- */}
 
     <FullScreenSelector
       visible={showSportModal}

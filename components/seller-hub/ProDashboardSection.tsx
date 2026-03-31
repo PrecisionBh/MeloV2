@@ -2,7 +2,6 @@ import { useRouter } from "expo-router"
 import { StyleSheet, View } from "react-native"
 
 import BoostsCard from "@/components/prodashboard/BoostsCard"
-import ProQuickActions from "@/components/prodashboard/ProQuickActions"
 
 type Props = {
   userId: string
@@ -29,15 +28,11 @@ export default function ProDashboardSection({
         boostsRemaining={boostsRemaining}
         megaBoostsRemaining={megaBoostsRemaining} // ✅ PASS IT DOWN
         lastBoostReset={lastBoostReset}
-        disabled={!isPro}
         onPressBoost={() => {
           if (!isPro) return
           router.push("/seller-hub/my-listings")
         }}
       />
-
-      {/* 🤍 Pro Tools */}
-      <ProQuickActions isPro={isPro} />
 
       <View style={styles.bottomSpacer} />
     </View>

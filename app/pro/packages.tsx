@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons"
 import { useRouter } from "expo-router"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Alert,
   Dimensions,
@@ -172,12 +172,6 @@ useEffect(() => {
     load()
   }, [])
 
-  const proPillText = useMemo(() => {
-    if (!userId) return "SIGN IN REQUIRED"
-    if (loading) return "CHECKING STATUS..."
-    if (isPro) return "MELO PRO ACTIVE"
-    return "MELO PRO REQUIRED"
-  }, [userId, loading, isPro])
 
   const onPressUpgrade = () => {
     if (!userId) {
@@ -193,15 +187,6 @@ useEffect(() => {
       router.push("/login")
       return
     }
-
-    if (!isPro) {
-  Alert.alert(
-    "Melo Pro Required",
-    "Boost Packs are exclusive to Melo Pro sellers."
-  )
-  router.push("/melo-pro")
-  return
-}
 
 try {
   setBuyingId(packId)
@@ -248,81 +233,91 @@ try {
       showsVerticalScrollIndicator={false}
     >
       {/* HERO */}
-      <View style={styles.hero}>
-        <View style={styles.heroGlow} />
+<View style={styles.hero}>
+  <View style={styles.heroGlow} />
 
-        <View style={styles.heroTopRow}>
-          <View style={styles.brandPill}>
-            <Ionicons name="sparkles" size={14} color="#0F1E17" />
-            <Text style={styles.brandPillText}>BOOST STORE</Text>
-          </View>
+  <View style={styles.heroTopRow}>
+    <View style={styles.brandPill}>
+      <Ionicons name="sparkles" size={14} color="#0F1E17" />
+      <Text style={styles.brandPillText}>BOOST STORE</Text>
+    </View>
+  </View>
 
-          <View
-            style={[
-              styles.statusPill,
-              isPro ? styles.statusPillPro : styles.statusPillLocked,
-            ]}
-          >
-            <Ionicons
-              name={isPro ? "checkmark-circle" : "lock-closed"}
-              size={14}
-              color={isPro ? "#0F1E17" : "#FFFFFF"}
-            />
-            <Text
-              style={[
-                styles.statusPillText,
-                isPro ? { color: "#0F1E17" } : { color: "#FFFFFF" },
-              ]}
-            >
-              {proPillText}
-            </Text>
-          </View>
-        </View>
+  {/* 🔥 STRONGER HEADLINE */}
+  <Text style={styles.heroTitle}>Sell faster.</Text>
+  <Text style={styles.heroTitle2}>Get more offers.</Text>
 
-        <Text style={styles.heroTitle}>Get seen.</Text>
-        <Text style={styles.heroTitle2}>Sell faster.</Text>
+  {/* 🔥 CLEAR VALUE */}
+  <Text style={styles.heroSub}>
+    Boost your listing to the top of the marketplace where buyers are actively looking.
+    More visibility = more clicks, messages, and sales.
+  </Text>
 
-        <Text style={styles.heroSub}>
-          Boosts aren’t cosmetic — they’re strategy. Featured placement gets
-          more clicks, more offers, and faster sales.
-        </Text>
+  {/* 🔥 NEW: SIMPLE VISUAL EXPLANATION */}
+  <View style={styles.explainCard}>
+    <Text style={styles.explainTitle}>How Boosts Work</Text>
 
-        <View style={styles.featureRow}>
-          <FeatureCard
-            icon="rocket"
-            title="Stay at the Top"
-            desc="Boost keeps your listing featured for 7 days."
-          />
-          <FeatureCard
-            icon="flame"
-            title="Dominate with Mega"
-            desc="Mega Boost takes over 3 full rows."
-            accent="mega"
-          />
-          <FeatureCard
-            icon="trending-up"
-            title="Sell Faster"
-            desc="More visibility = more offers."
-          />
-        </View>
+    <View style={styles.explainRow}>
+      <Ionicons name="radio-button-on" size={10} color="#7FAF9B" />
+      <Text style={styles.explainText}>
+        Your listing moves to the top of the feed
+      </Text>
+    </View>
 
-        {!isPro && (
-          <TouchableOpacity
-            style={styles.upgradeBtn}
-            onPress={onPressUpgrade}
-            activeOpacity={0.9}
-            disabled={loading}
-          >
-            <View style={styles.upgradeInner}>
-              <Ionicons name="sparkles" size={18} color="#0F1E17" />
-              <Text style={styles.upgradeText}>
-                Upgrade to Melo Pro to buy packs
-              </Text>
-              <Ionicons name="arrow-forward" size={18} color="#0F1E17" />
-            </View>
-          </TouchableOpacity>
-        )}
-      </View>
+    <View style={styles.explainRow}>
+      <Ionicons name="radio-button-on" size={10} color="#7FAF9B" />
+      <Text style={styles.explainText}>
+        Buyers see it before other listings
+      </Text>
+    </View>
+
+    <View style={styles.explainRow}>
+      <Ionicons name="radio-button-on" size={10} color="#7FAF9B" />
+      <Text style={styles.explainText}>
+        More views → more offers → faster sales
+      </Text>
+    </View>
+
+    <View style={styles.guaranteeCard}>
+  <Ionicons name="shield-checkmark" size={18} color="#0F1E17" />
+  <Text style={styles.guaranteeText}>
+    If your item doesn’t sell, your boost credit is refunded.
+    Keep using it until it sells.
+  </Text>
+</View>
+  </View>
+
+  {/* 🔥 KEEP FEATURES BUT TIGHTER */}
+  <View style={styles.featureRow}>
+    <FeatureCard
+      icon="rocket"
+      title="Top Placement"
+      desc="Stay at the top for 7 days"
+    />
+    <FeatureCard
+      icon="flame"
+      title="Mega Exposure"
+      desc="Take over multiple rows for 14 days"
+      accent="mega"
+    />
+    <FeatureCard
+      icon="trending-up"
+      title="More Sales"
+      desc="Get more offers faster"
+    />
+  </View>
+</View>
+
+<Text style={{
+  marginHorizontal: 16,
+  marginTop: 10,
+  marginBottom: 10,
+  fontSize: 13,
+  fontWeight: "900",
+  color: "#BFE7D4"
+}}>
+Risk Free Boosting! If your boosted item doesnt sell the credit it refunded back to your account to use again!
+</Text>
 
       {/* BOOST PACKS */}
       <SectionHeader
@@ -332,71 +327,71 @@ try {
       />
 
       <View style={styles.grid}>
-        <View style={styles.row}>
-          <PackCard
-            pack={BOOST_PACKS[0]}
-            price={getPriceForPack(BOOST_PACKS[0].id)}
-            locked={!isPro}
-            loading={buyingId === BOOST_PACKS[0].id}
-            onPress={() => handleBuyPack(BOOST_PACKS[0].id)}
-          />
-          <PackCard
-            pack={BOOST_PACKS[1]}
-            price={getPriceForPack(BOOST_PACKS[1].id)}
-            locked={!isPro}
-            loading={buyingId === BOOST_PACKS[1].id}
-            onPress={() => handleBuyPack(BOOST_PACKS[1].id)}
-          />
-        </View>
-
-        <PackCard
-          pack={BOOST_PACKS[2]}
-          price={getPriceForPack(BOOST_PACKS[2].id)}
-          locked={!isPro}
-          loading={buyingId === BOOST_PACKS[2].id}
-          onPress={() => handleBuyPack(BOOST_PACKS[2].id)}
-          fullWidth
-        />
-      </View>
-
-      {/* MEGA PACKS */}
-      <SectionHeader
-        title="Mega Boost Packs"
-        subtitle="Each Mega lasts 14 days"
-        icon="flame-outline"
-      />
-
-      <View style={styles.grid}>
-        <View style={styles.row}>
-          <PackCard
-            pack={MEGA_PACKS[0]}
-            price={getPriceForPack(MEGA_PACKS[0].id)}
-            locked={!isPro}
-            loading={buyingId === MEGA_PACKS[0].id}
-            onPress={() => handleBuyPack(MEGA_PACKS[0].id)}
-          />
-          <PackCard
-            pack={MEGA_PACKS[1]}
-            price={getPriceForPack(MEGA_PACKS[1].id)}
-            locked={!isPro}
-            loading={buyingId === MEGA_PACKS[1].id}
-            onPress={() => handleBuyPack(MEGA_PACKS[1].id)}
-          />
-        </View>
-
-        <PackCard
-          pack={MEGA_PACKS[2]}
-          price={getPriceForPack(MEGA_PACKS[2].id)}
-          locked={!isPro}
-          loading={buyingId === MEGA_PACKS[2].id}
-          onPress={() => handleBuyPack(MEGA_PACKS[2].id)}
-          fullWidth
-        />
-      </View>
-
-      <View style={{ height: 28 }} />
-    </ScrollView>
+  <View style={styles.row}>
+    <PackCard
+      pack={BOOST_PACKS[0]}
+      price={getPriceForPack(BOOST_PACKS[0].id)}
+      locked={false}
+      loading={buyingId === BOOST_PACKS[0].id}
+      onPress={() => handleBuyPack(BOOST_PACKS[0].id)}
+    />
+    <PackCard
+      pack={BOOST_PACKS[1]}
+      price={getPriceForPack(BOOST_PACKS[1].id)}
+      locked={false}
+      loading={buyingId === BOOST_PACKS[1].id}
+      onPress={() => handleBuyPack(BOOST_PACKS[1].id)}
+    />
   </View>
+
+  <PackCard
+    pack={BOOST_PACKS[2]}
+    price={getPriceForPack(BOOST_PACKS[2].id)}
+    locked={false}
+    loading={buyingId === BOOST_PACKS[2].id}
+    onPress={() => handleBuyPack(BOOST_PACKS[2].id)}
+    fullWidth
+  />
+</View>
+
+{/* MEGA PACKS */}
+<SectionHeader
+  title="Mega Boost Packs"
+  subtitle="Each Mega lasts 14 days"
+  icon="flame-outline"
+/>
+
+<View style={styles.grid}>
+  <View style={styles.row}>
+    <PackCard
+      pack={MEGA_PACKS[0]}
+      price={getPriceForPack(MEGA_PACKS[0].id)}
+      locked={false}
+      loading={buyingId === MEGA_PACKS[0].id}
+      onPress={() => handleBuyPack(MEGA_PACKS[0].id)}
+    />
+    <PackCard
+      pack={MEGA_PACKS[1]}
+      price={getPriceForPack(MEGA_PACKS[1].id)}
+      locked={false}
+      loading={buyingId === MEGA_PACKS[1].id}
+      onPress={() => handleBuyPack(MEGA_PACKS[1].id)}
+    />
+  </View>
+
+  <PackCard
+    pack={MEGA_PACKS[2]}
+    price={getPriceForPack(MEGA_PACKS[2].id)}
+    locked={false}
+    loading={buyingId === MEGA_PACKS[2].id}
+    onPress={() => handleBuyPack(MEGA_PACKS[2].id)}
+    fullWidth
+  />
+</View>
+
+<View style={{ height: 28 }} />
+</ScrollView>
+</View>
 )
 }
 
@@ -510,7 +505,7 @@ function PackCard({
           loading && { opacity: 0.85 },
         ]}
         onPress={onPress}
-        disabled={locked || loading}
+        disabled={loading}
       >
         <View style={styles.buyInner}>
           <Ionicons name="card-outline" size={18} color="#0F1E17" />
@@ -536,10 +531,10 @@ function Bullet({ icon, text }: { icon: any; text: string }) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0B1410",
+    backgroundColor: "#1f1f1f",
   },
   content: {
-    paddingBottom: 16,
+    paddingBottom: 80,
   },
 
   row: {
@@ -552,7 +547,7 @@ packCard: {
   width: (width - 16 * 2 - 12) / 2, // 2 cards per row
   borderRadius: 18,
   padding: 12,
-  backgroundColor: "rgba(255,255,255,0.06)",
+  backgroundColor: "rgba(255,255,255,0.09)",
   borderWidth: 1,
   borderColor: "rgba(255,255,255,0.10)",
 },
@@ -919,4 +914,53 @@ featureDesc: {
   textAlign: "center",
   lineHeight: 14,
 },
+
+explainCard: {
+  marginTop: 14,
+  backgroundColor: "rgba(255,255,255,0.06)",
+  borderRadius: 16,
+  padding: 12,
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.08)",
+},
+
+explainTitle: {
+  fontSize: 13,
+  fontWeight: "900",
+  color: "#BFE7D4",
+  marginBottom: 8,
+},
+
+explainRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+  marginBottom: 6,
+},
+
+explainText: {
+  fontSize: 12,
+  fontWeight: "700",
+  color: "rgba(255,255,255,0.85)",
+},
+
+guaranteeCard: {
+  marginTop: 12,
+  backgroundColor: "#BFE7D4",
+  borderRadius: 14,
+  paddingVertical: 10,
+  paddingHorizontal: 12,
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+},
+
+guaranteeText: {
+  flex: 1,
+  fontSize: 12,
+  fontWeight: "900",
+  color: "#0F1E17",
+  lineHeight: 16,
+},
+
 })

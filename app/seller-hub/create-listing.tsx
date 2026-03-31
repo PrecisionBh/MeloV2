@@ -5,11 +5,10 @@ import CreateListingFooter from "@/components/create-listing/CreateListingFooter
 import FullScreenSelector from "@/components/create-listing/FullScreenSelector"
 import ImageUpload from "@/components/create-listing/ImageUpload"
 import PriceOffersSection from "@/components/create-listing/PriceOffersSection"
-import ProFeaturesSection from "@/components/create-listing/ProFeaturesSection"
 import ShippingSection from "@/components/create-listing/ShippingSection"
 import TitleDescriptionSection from "@/components/create-listing/TitleDescriptionSection"
 import ReturnAddressRequiredModal from "@/components/modals/ReturnAddressRequiredModal"
-import UpgradeToProButton from "@/components/pro/UpgradeToProButton"
+import UpgradeToProButton from "@/components/pro/UpgradeToProCard"
 import { useAuth } from "@/context/AuthContext"
 import { handleAppError } from "@/lib/errors/appError"
 import { supabase } from "@/lib/supabase"
@@ -487,7 +486,7 @@ const handleCreateListing = async () => {
 
    /* ---------------- BOOST LOGIC ---------------- */
 
-if (isPro && data?.id) {
+if (data?.id) {
   try {
     if (isMegaBoosted) {
       const { error: megaError } = await supabase.rpc("mega_boost_listing", {
@@ -616,24 +615,77 @@ return (
 />
 
       <View style={styles.sectionSpacing}>
-        <ProFeaturesSection
-          isPro={isPro}
-          boostsRemaining={boostsRemaining}
-          megaBoostsRemaining={megaBoostsRemaining}
-          isBoosted={isBoosted}
-          setIsBoosted={(val: boolean) => {
-            setIsBoosted(val)
-            if (val) setIsMegaBoosted(false)
-          }}
-          isMegaBoosted={isMegaBoosted}
-          setIsMegaBoosted={(val: boolean) => {
-            setIsMegaBoosted(val)
-            if (val) setIsBoosted(false)
-          }}
-          megaBoostDescription="Take over the home page in one listing."
-          quantity={quantity}
-          setQuantity={setQuantity}
-        />
+ <View style={styles.sectionSpacing}>
+  <View style={styles.boostSectionWrap}>
+
+    <Text style={styles.boostHeader}>Boost Your Listing</Text>
+
+    {/* 🔥 COUNTERS */}
+    <View style={styles.boostCounterRow}>
+      <Text style={styles.boostCounter}>
+        ⚡ {boostsRemaining} Boosts
+      </Text>
+      <Text style={styles.boostCounter}>
+        🔥 {megaBoostsRemaining} Mega
+      </Text>
+    </View>
+
+    <Text style={styles.boostSub}>
+      Boost your listing to get more views and sell faster.
+    </Text>
+
+    {/* OPTIONS */}
+    <View style={styles.boostRow}>
+      <TouchableOpacity
+        style={[
+          styles.boostOption,
+          isBoosted && styles.boostOptionActive,
+        ]}
+        onPress={() => {
+          setIsBoosted(true)
+          setIsMegaBoosted(false)
+        }}
+        activeOpacity={0.9}
+      >
+        <Text style={styles.boostOptionTitle}>Boost</Text>
+        <Text style={styles.boostOptionDesc}>
+          Top placement for 7 days
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.boostOption,
+          isMegaBoosted && styles.boostOptionActive,
+        ]}
+        onPress={() => {
+          setIsMegaBoosted(true)
+          setIsBoosted(false)
+        }}
+        activeOpacity={0.9}
+      >
+        <Text style={styles.boostOptionTitle}>Mega Boost</Text>
+        <Text style={styles.boostOptionDesc}>
+          Full spotlight for 14 days
+        </Text>
+      </TouchableOpacity>
+    </View>
+
+    {/* LINK */}
+    <TouchableOpacity
+      onPress={() => router.push("/pro/packages")}
+      activeOpacity={0.8}
+    >
+      <Text style={styles.boostLink}>
+        🚀 Need more boosts? Get them →
+      </Text>
+    </TouchableOpacity>
+
+  </View>
+</View>
+
+  
+
       </View>
 
       <View style={styles.sectionSpacing}>
@@ -762,17 +814,33 @@ return (
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#e8e8e8" },
-  loaderWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
-  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 140 },
-  sectionSpacing: { marginTop: 18 },
 
-    modalOverlay: {
+  loaderWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 140,
+  },
+
+  sectionSpacing: {
+    marginTop: 18,
+  },
+
+  /* ---------------- MODAL ---------------- */
+
+  modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
+
   modalCard: {
     width: "100%",
     backgroundColor: "#fff",
@@ -780,18 +848,21 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: "center",
   },
+
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
     textAlign: "center",
     marginBottom: 10,
   },
+
   modalText: {
     fontSize: 14,
     color: "#555",
     textAlign: "center",
     marginBottom: 20,
   },
+
   upgradeButton: {
     backgroundColor: "#7FAF9B",
     paddingVertical: 12,
@@ -801,14 +872,87 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
+
   upgradeButtonText: {
     color: "#fff",
     fontWeight: "700",
     fontSize: 16,
   },
+
   laterText: {
     color: "#888",
     fontSize: 14,
   },
-  
+
+  /* ---------------- BOOST SECTION (UPDATED) ---------------- */
+
+  boostHeader: {
+    fontSize: 16,
+    fontWeight: "900",
+    marginBottom: 6,
+  },
+
+  boostCounterRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+
+  boostCounter: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#7FAF9B",
+  },
+
+  boostSub: {
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 12,
+  },
+
+  boostRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+
+  boostOption: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    backgroundColor: "#fff",
+  },
+
+  boostOptionActive: {
+    borderColor: "#7FAF9B",
+    backgroundColor: "#EAF4EF",
+  },
+
+  boostOptionTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+
+  boostOptionDesc: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 4,
+    textAlign: "center",
+  },
+
+  boostLink: {
+    marginTop: 10,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#7FAF9B",
+    textAlign: "center",
+  },
+
+  boostSectionWrap: {
+  backgroundColor: "#fff",
+  borderRadius: 16,
+  padding: 14,
+},
 })

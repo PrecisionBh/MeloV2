@@ -118,18 +118,22 @@ export default function MeloProScreen() {
           </Text>
 
           <View style={styles.heroStatsRow}>
-            <StatCard
-              icon="rocket-outline"
-              label="Boosted! Your Listings stay on top" 
-              value="Pro Only"
-            />
-            <StatCard
-              icon="layers-outline"
-              label="Unlimited listings"
-              value="Pro only"
-            />
-            <StatCard icon="cube-outline" label="Add Quantity to Listings" value="Pro only" />
-          </View>
+  <StatCard
+    icon="rocket-outline"
+    label="Lower seller fees — save a ton of money"
+    value="Pro Only"
+  />
+  <StatCard
+    icon="layers-outline"
+    label="Unlimited listings"
+    value="Pro only"
+  />
+  <StatCard
+    icon="cube-outline"
+    label="Add Quantity to Listings"
+    value="Pro only"
+  />
+</View>
         </View>
 
         {/* CTA + disclaimer moved ABOVE "What you get" */}

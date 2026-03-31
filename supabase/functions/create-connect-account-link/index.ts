@@ -45,87 +45,92 @@ serve(
 
       const { user_id, email } = body
 
-      console.log("🧾 PARSED INPUT:", {
-        user_id,
-        email,
-        hasUserId: !!user_id,
-        hasEmail: !!email,
-      })
-
       if (!user_id || !email) {
-        console.log("❌ MISSING REQUIRED FIELDS")
         return new Response(
           JSON.stringify({ error: "Missing user_id or email" }),
           { status: 400, headers: { "Content-Type": "application/json" } }
         )
       }
 
-      // 1️⃣ Fetch profile from DB (SOURCE OF TRUTH)
-      console.log("🔎 FETCHING PROFILE FOR USER:", user_id)
-
+      // 1️⃣ Fetch profile
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("stripe_account_id")
         .eq("id", user_id)
         .single()
 
-      console.log("👤 PROFILE QUERY RESULT:", {
-        profile,
-        error,
-      })
-
-      if (error) {
-        console.error("❌ PROFILE FETCH ERROR:", error)
-        throw error
-      }
+      if (error) throw error
 
       let stripeAccountId = profile?.stripe_account_id
+      let account: any
 
-      console.log("🏦 EXISTING STRIPE ACCOUNT:", stripeAccountId)
+      console.log("🏦 EXISTING ACCOUNT:", stripeAccountId)
 
-      // 2️⃣ Create account ONLY if none exists
+      // 2️⃣ CREATE if none exists
       if (!stripeAccountId) {
-        console.log("🆕 CREATING NEW STRIPE EXPRESS ACCOUNT FOR:", email)
+        console.log("🆕 CREATING NEW STRIPE ACCOUNT")
 
-        const account = await stripe.accounts.create({
+        account = await stripe.accounts.create({
           type: "express",
           email,
 
-          // ✅ CRITICAL: Prevent Stripe auto-payouts. Withdrawals are app-controlled.
+          capabilities: {
+            card_payments: { requested: true },
+            transfers: { requested: true },
+          },
+
           settings: {
             payouts: {
-              schedule: {
-                interval: "manual",
-              },
+              schedule: { interval: "manual" },
             },
           },
         })
 
-        console.log("✅ STRIPE ACCOUNT CREATED:", account.id)
-
         stripeAccountId = account.id
 
-        // 3️⃣ Persist immediately
-        console.log("💾 SAVING STRIPE ACCOUNT ID TO PROFILE")
-
-        const { error: updateError } = await supabase
+        await supabase
           .from("profiles")
           .update({ stripe_account_id: stripeAccountId })
           .eq("id", user_id)
 
-        if (updateError) {
-          console.error("❌ PROFILE UPDATE ERROR:", updateError)
-          throw updateError
-        }
-
-        console.log("✅ PROFILE UPDATED WITH STRIPE ACCOUNT ID")
+        console.log("✅ ACCOUNT CREATED:", stripeAccountId)
       } else {
-        console.log("♻️ REUSING EXISTING STRIPE ACCOUNT:", stripeAccountId)
+        console.log("♻️ CHECKING EXISTING ACCOUNT")
+
+        account = await stripe.accounts.retrieve(stripeAccountId)
+
+        // 🚨 CRITICAL FIX
+        if (!account.details_submitted) {
+          console.log("⚠️ ACCOUNT INCOMPLETE → RECREATING")
+
+          const newAccount = await stripe.accounts.create({
+            type: "express",
+            email,
+
+            capabilities: {
+              card_payments: { requested: true },
+              transfers: { requested: true },
+            },
+
+            settings: {
+              payouts: {
+                schedule: { interval: "manual" },
+              },
+            },
+          })
+
+          stripeAccountId = newAccount.id
+
+          await supabase
+            .from("profiles")
+            .update({ stripe_account_id: stripeAccountId })
+            .eq("id", user_id)
+
+          console.log("✅ NEW ACCOUNT CREATED:", stripeAccountId)
+        }
       }
 
-      // 4️⃣ Create onboarding link (safe to repeat)
-      console.log("🔗 CREATING STRIPE ONBOARDING LINK")
-
+      // 3️⃣ Create onboarding link
       const accountLink = await stripe.accountLinks.create({
         account: stripeAccountId,
         return_url: "https://melomp-redirect.vercel.app",
@@ -133,7 +138,7 @@ serve(
         type: "account_onboarding",
       })
 
-      console.log("🎉 ONBOARDING LINK CREATED:", accountLink.url)
+      console.log("🎉 ONBOARDING LINK:", accountLink.url)
 
       return new Response(
         JSON.stringify({
@@ -143,11 +148,7 @@ serve(
         { status: 200, headers: { "Content-Type": "application/json" } }
       )
     } catch (err: any) {
-      console.error("💥 FUNCTION CRASH:", {
-        message: err?.message,
-        stack: err?.stack,
-        raw: err,
-      })
+      console.error("💥 FUNCTION CRASH:", err)
 
       return new Response(
         JSON.stringify({ error: err.message }),

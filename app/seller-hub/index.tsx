@@ -10,10 +10,11 @@ import {
 } from "react-native"
 
 import AppHeader from "@/components/app-header"
-import UpgradeToProButton from "@/components/pro/UpgradeToProButton"
+
 import FreeDashboardSection from "@/components/seller-hub/FreeDashboardSection"
 import ProBenefitsCard from "@/components/seller-hub/ProBenefitsCard"
 import ProDashboardSection from "@/components/seller-hub/ProDashboardSection"
+import ProTools from "@/components/seller-hub/protools"; // ✅ NEW
 import { useAuth } from "@/context/AuthContext"
 import { handleAppError } from "@/lib/errors/appError"
 import { supabase } from "@/lib/supabase"
@@ -28,18 +29,13 @@ export default function SellerHubScreen() {
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
   const [offersActionCount, setOffersActionCount] = useState(0)
 
-  const [proLoading, setProLoading] = useState(true)
   const [isPro, setIsPro] = useState(false)
   const [boostsRemaining, setBoostsRemaining] = useState<number>(0)
   const [megaBoostsRemaining, setMegaBoostsRemaining] = useState<number>(0)
 
-  /* ---------------- LOAD COUNTS ---------------- */
-
   useFocusEffect(
     useCallback(() => {
       if (!sellerId) return
-
-      console.log("🔄 SellerHub focused — refreshing dashboard")
 
       loadProStatus()
       loadOrdersToShipCount()
@@ -51,8 +47,6 @@ export default function SellerHubScreen() {
 
   const loadProStatus = async () => {
     if (!sellerId) return
-
-    setProLoading(true)
 
     try {
       const { data, error } = await supabase
@@ -70,103 +64,62 @@ export default function SellerHubScreen() {
       setIsPro(false)
       setBoostsRemaining(0)
       setMegaBoostsRemaining(0)
-      handleAppError(err, {
-        context: "seller_hub_load_pro_status",
-        silent: true,
-      })
-    } finally {
-      setProLoading(false)
+      handleAppError(err, { silent: true })
     }
   }
-
-  /* ---------------- ORDERS: NEED TO SHIP ---------------- */
 
   const loadOrdersToShipCount = async () => {
     if (!sellerId) return
 
-    try {
-      const { count } = await supabase
-        .from("orders")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "paid")
-        .eq("seller_id", sellerId)
+    const { count } = await supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "paid")
+      .eq("seller_id", sellerId)
 
-      setOrdersToShipCount(count ?? 0)
-    } catch (err) {
-      handleAppError(err, {
-        context: "seller_hub_load_orders_to_ship_catch",
-        silent: true,
-      })
-    }
+    setOrdersToShipCount(count ?? 0)
   }
-
-  /* ---------------- ORDERS: IN PROGRESS ---------------- */
 
   const loadOrdersInProgressCount = async () => {
     if (!sellerId) return
 
-    try {
-      const { count } = await supabase
-        .from("orders")
-        .select("id", { count: "exact", head: true })
-        .eq("seller_id", sellerId)
-        .or(`
-          tracking_status.eq.label_created,
-          tracking_status.eq.in_transit,
-          status.eq.return_started,
-          status.eq.return_processing
-        `)
+    const { count } = await supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("seller_id", sellerId)
+      .or(`
+        tracking_status.eq.label_created,
+        tracking_status.eq.in_transit,
+        status.eq.return_started,
+        status.eq.return_processing
+      `)
 
-      setOrdersInProgressCount(count ?? 0)
-    } catch (err) {
-      handleAppError(err, {
-        context: "seller_hub_load_orders_in_progress_catch",
-        silent: true,
-      })
-    }
+    setOrdersInProgressCount(count ?? 0)
   }
-
-  /* ---------------- MESSAGES: UNREAD ---------------- */
 
   const loadUnreadMessagesCount = async () => {
     if (!sellerId) return
 
-    try {
-      const { count } = await supabase
-        .from("messages")
-        .select("id", { count: "exact", head: true })
-        .is("read_at", null)
-        .eq("receiver_id", sellerId)
+    const { count } = await supabase
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .is("read_at", null)
+      .eq("receiver_id", sellerId)
 
-      setUnreadMessagesCount(count ?? 0)
-    } catch (err) {
-      handleAppError(err, {
-        context: "seller_hub_load_unread_messages_catch",
-        silent: true,
-      })
-    }
+    setUnreadMessagesCount(count ?? 0)
   }
-
-  /* ---------------- OFFERS: ACTIONABLE ---------------- */
 
   const loadOffersActionCount = async () => {
     if (!sellerId) return
 
-    try {
-      const { count } = await supabase
-        .from("offers")
-        .select("id", { count: "exact", head: true })
-        .eq("seller_id", sellerId)
-        .in("status", ["pending", "countered"])
-        .neq("last_actor", "seller")
+    const { count } = await supabase
+      .from("offers")
+      .select("id", { count: "exact", head: true })
+      .eq("seller_id", sellerId)
+      .in("status", ["pending", "countered"])
+      .neq("last_actor", "seller")
 
-      setOffersActionCount(count ?? 0)
-    } catch (err) {
-      handleAppError(err, {
-        context: "seller_hub_load_offers_action_catch",
-        silent: true,
-      })
-    }
+    setOffersActionCount(count ?? 0)
   }
 
   const totalOrdersBadge = ordersToShipCount + ordersInProgressCount
@@ -175,43 +128,42 @@ export default function SellerHubScreen() {
     <View style={styles.screen}>
       <AppHeader title="Seller Hub" backLabel="Profile" backRoute="/profile" />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+
+        {/* 🔥 DASHBOARD */}
         <FreeDashboardSection
           totalOrdersBadge={totalOrdersBadge}
           offersActionCount={offersActionCount}
           unreadMessagesCount={unreadMessagesCount}
         />
 
+        {/* 🔥 BOOST (RIGHT UNDER SETTINGS) */}
+        <ProDashboardSection
+          userId={sellerId || ""}
+          boostsRemaining={boostsRemaining}
+          megaBoostsRemaining={megaBoostsRemaining}
+          lastBoostReset={null}
+          isPro={isPro}
+        />
+
+        {/* 🔥 PRO MEMBERS TITLE */}
         <View style={styles.dividerWrap}>
           <View style={styles.dividerLine} />
           <Text style={styles.dividerText}>Pro Members</Text>
           <View style={styles.dividerLine} />
         </View>
 
+        {/* 🔥 BENEFITS */}
         <ProBenefitsCard isPro={isPro} />
 
-        {!isPro && (
-          <UpgradeToProButton style={styles.upgradeButton} />
-        )}
+        {/* 🔥 PRO TOOLS (NEW LOCATION) */}
+        <ProTools isPro={isPro} />  
 
-        <View style={styles.proWrap}>
-          <ProDashboardSection
-            userId={sellerId || ""}
-            boostsRemaining={boostsRemaining}
-            megaBoostsRemaining={megaBoostsRemaining}
-            lastBoostReset={null}
-            isPro={isPro}
-          />
-        </View>
       </ScrollView>
 
       <TouchableOpacity
         style={styles.fab}
         onPress={() => router.push("/seller-hub/create-listing")}
-        activeOpacity={0.9}
       >
         <Ionicons name="add" size={20} color="#0F1E17" />
         <Text style={styles.fabText}>Create Listing</Text>
@@ -232,6 +184,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
+    marginTop: 10,
   },
   dividerLine: {
     flex: 1,
@@ -247,10 +200,6 @@ const styles = StyleSheet.create({
   upgradeButton: {
     marginHorizontal: 16,
     marginTop: 12,
-    marginBottom: 6,
-  },
-  proWrap: {
-    marginTop: 4,
   },
   fab: {
     position: "absolute",

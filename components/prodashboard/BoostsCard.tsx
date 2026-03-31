@@ -14,19 +14,17 @@ import { supabase } from "@/lib/supabase"
 type Props = {
   userId: string
   boostsRemaining: number
-  megaBoostsRemaining: number // ✅ NEW
+  megaBoostsRemaining: number
   lastBoostReset: string | null
   onPressBoost: () => void
-  disabled?: boolean
 }
 
 export default function BoostsCard({
   userId,
   boostsRemaining,
-  megaBoostsRemaining, // ✅ NEW
+  megaBoostsRemaining,
   lastBoostReset,
   onPressBoost,
-  disabled = false,
 }: Props) {
   const router = useRouter()
 
@@ -74,27 +72,25 @@ export default function BoostsCard({
   }, [userId])
 
   const onPressAddMore = () => {
-    if (disabled) {
-      router.push("/melo-pro")
-      return
-    }
-
-    router.push("/pro/packages")
+    router.push("/pro/packages") // ✅ ALWAYS GO TO PACKAGES
   }
 
   return (
-    <View style={[styles.card, disabled && styles.locked]}>
+    <View style={styles.card}>
+      {/* Header */}
       <View style={styles.headerRow}>
         <Ionicons name="sparkles" size={18} color="#CFAF4A" />
         <Text style={styles.title}>Boost Power</Text>
       </View>
 
+      {/* Subtitle */}
       <Text style={styles.subtitle}>
-        {disabled
-          ? "Upgrade to Melo Pro to unlock Boost & Mega Boost visibility"
-          : `${boostsRemaining} boosts available`}
+        {boostsRemaining > 0
+          ? `${boostsRemaining} boosts available`
+          : "Purchase boosts to increase visibility"}
       </Text>
 
+      {/* Pills */}
       <View style={styles.pillsRow}>
         {/* Boost Credits */}
         <View style={styles.pillContainer}>
@@ -133,39 +129,30 @@ export default function BoostsCard({
         </View>
       </View>
 
+      {/* Boost Button */}
       <TouchableOpacity
-        style={[styles.boostButton, disabled && styles.boostButtonDisabled]}
+        style={styles.boostButton}
         activeOpacity={0.9}
-        onPress={disabled ? undefined : onPressBoost}
-        disabled={disabled}
+        onPress={onPressBoost}
       >
         <Ionicons name="flash" size={18} color="#CFAF4A" />
         <Text style={styles.boostButtonText}>Boost a Listing</Text>
       </TouchableOpacity>
 
+      {/* Add More */}
       <TouchableOpacity
-        style={[
-          styles.addMoreButton,
-          disabled && styles.addMoreButtonDisabled,
-        ]}
+        style={styles.addMoreButton}
         activeOpacity={0.9}
         onPress={onPressAddMore}
       >
-        <Ionicons
-          name={disabled ? "lock-closed" : "cart-outline"}
-          size={18}
-          color="#FFFFFF"
-        />
-        <Text style={styles.addMoreText}>
-          {disabled ? "Unlock Boost Packs" : "Add more boosts"}
-        </Text>
+        <Ionicons name="cart-outline" size={18} color="#FFFFFF" />
+        <Text style={styles.addMoreText}>Add more boosts</Text>
       </TouchableOpacity>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  /* Container EXACTLY mimics ProFeaturesCard locking style */
   card: {
     marginTop: 14,
     marginHorizontal: 16,
@@ -181,11 +168,6 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  /* 🔒 THIS is the magic (same as create-listing) */
-  locked: {
-    opacity: 0.7,
-  },
-
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -195,20 +177,6 @@ const styles = StyleSheet.create({
 
   title: {
     fontSize: 16,
-    fontWeight: "900",
-    color: "#0F1E17",
-  },
-
-  proPill: {
-    marginLeft: "auto",
-    backgroundColor: "#CFAF4A",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 999,
-  },
-
-  proPillText: {
-    fontSize: 10,
     fontWeight: "900",
     color: "#0F1E17",
   },
@@ -290,14 +258,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  resetText: {
-    marginTop: 12,
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#6B8F7D",
-    textAlign: "center",
-  },
-
   boostButton: {
     marginTop: 16,
     height: 48,
@@ -311,17 +271,12 @@ const styles = StyleSheet.create({
     borderColor: "rgba(214,179,90,0.65)",
   },
 
-  boostButtonDisabled: {
-    opacity: 0.35,
-  },
-
   boostButtonText: {
     fontSize: 14,
     fontWeight: "900",
     color: "#CFAF4A",
   },
 
-  /* NEW: Add More Boosts button */
   addMoreButton: {
     marginTop: 10,
     height: 46,
@@ -333,11 +288,6 @@ const styles = StyleSheet.create({
     gap: 10,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.14)",
-  },
-
-  addMoreButtonDisabled: {
-    opacity: 0.95, // keep readable even when locked (card itself already dims)
-    borderColor: "rgba(214,179,90,0.45)",
   },
 
   addMoreText: {
