@@ -49,6 +49,7 @@ Deno.serve(async (req) => {
   let body: any
   try {
     body = await req.json()
+    console.log("📦 Body:", body)
   } catch {
     return new Response("Invalid JSON body", { status: 400, headers: corsHeaders })
   }
@@ -56,10 +57,12 @@ Deno.serve(async (req) => {
   const { user_id, amount_cents, payout_type } = body
 
   if (!user_id || !amount_cents || !payout_type) {
+    console.log("❌ Missing params")
     return new Response("Missing parameters", { status: 400, headers: corsHeaders })
   }
 
   if (payout_type !== "instant" && payout_type !== "standard") {
+    console.log("❌ Invalid payout type:", payout_type)
     return new Response("Invalid payout_type", { status: 400, headers: corsHeaders })
   }
 
@@ -69,17 +72,27 @@ Deno.serve(async (req) => {
     .eq("user_id", user_id)
     .single()
 
+  console.log("👛 Wallet:", wallet)
+
   if (walletErr || !wallet) {
+    console.log("❌ Wallet error:", walletErr)
     return new Response("Wallet not found", { status: 404, headers: corsHeaders })
   }
 
   if (wallet.payout_locked) {
+    console.log("❌ Wallet already locked")
     return new Response("Wallet locked", { status: 409, headers: corsHeaders })
   }
 
   if (amount_cents > wallet.available_balance_cents) {
+    console.log("❌ Insufficient funds:", {
+      requested: amount_cents,
+      available: wallet.available_balance_cents,
+    })
     return new Response("Insufficient funds", { status: 400, headers: corsHeaders })
   }
+
+  console.log("🔒 Locking wallet...")
 
   const { error: lockErr } = await supabase
     .from("wallets")
@@ -87,6 +100,7 @@ Deno.serve(async (req) => {
     .eq("id", wallet.id)
 
   if (lockErr) {
+    console.log("❌ Failed to lock wallet:", lockErr)
     return new Response("Failed to lock wallet", { status: 500, headers: corsHeaders })
   }
 
@@ -99,8 +113,24 @@ Deno.serve(async (req) => {
       .eq("id", user_id)
       .single()
 
+    console.log("👤 Profile:", profile)
+
     if (profileErr || !profile?.stripe_account_id) {
+      console.log("❌ Stripe account missing:", profileErr)
       throw new Error("Stripe account missing")
+    }
+
+    // 🔍 Check account capabilities
+    const account = await stripe.accounts.retrieve(profile.stripe_account_id)
+
+    console.log("🏦 Stripe Account:", {
+      id: account.id,
+      payouts_enabled: account.payouts_enabled,
+      charges_enabled: account.charges_enabled,
+    })
+
+    if (!account.payouts_enabled) {
+      throw new Error("Stripe payouts not enabled")
     }
 
     let fee_cents = 0
@@ -113,8 +143,19 @@ Deno.serve(async (req) => {
 
     const net_cents = amount_cents - fee_cents
 
+    console.log("💰 Breakdown:", {
+      amount_cents,
+      fee_cents,
+      net_cents,
+      payout_type,
+    })
+
+    // 🔥 PLATFORM FEE TRANSFER
     if (payout_type === "instant" && fee_cents > 0) {
       const platformAccountId = Deno.env.get("STRIPE_PLATFORM_ACCOUNT_ID")!
+
+      console.log("💸 Sending fee to platform:", platformAccountId)
+
       await stripe.transfers.create(
         {
           amount: fee_cents,
@@ -125,6 +166,8 @@ Deno.serve(async (req) => {
       )
     }
 
+    console.log("🏦 Creating payout...")
+
     const payout = await stripe.payouts.create(
       {
         amount: net_cents,
@@ -133,6 +176,8 @@ Deno.serve(async (req) => {
       },
       { stripeAccount: profile.stripe_account_id }
     )
+
+    console.log("✅ Stripe payout created:", payout.id)
 
     createdStripePayoutId = payout.id
 
@@ -150,6 +195,8 @@ Deno.serve(async (req) => {
       { onConflict: "stripe_payout_id" }
     )
 
+    console.log("📄 Payout record saved")
+
     await supabase.from("wallet_transactions").insert({
       wallet_id: wallet.id,
       user_id,
@@ -160,6 +207,8 @@ Deno.serve(async (req) => {
       description: "Seller withdrawal",
     })
 
+    console.log("🧾 Wallet transaction recorded")
+
     await supabase
       .from("wallets")
       .update({
@@ -169,32 +218,7 @@ Deno.serve(async (req) => {
       })
       .eq("id", wallet.id)
 
-    /* ---------------- NOTIFICATIONS (FIXED) ---------------- */
-    try {
-      await fetch(`${SUPABASE_URL}/functions/v1/send-notification`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        },
-        body: JSON.stringify({
-          userId: user_id,
-          type: "withdrawal",
-          title: "Withdrawal Sent",
-          body: `Your payout of $${(net_cents / 100).toFixed(2)} has been sent to your bank account.`,
-          data: {
-            payout_id: payout.id,
-            amount_cents,
-            fee_cents,
-            net_cents,
-            payout_type,
-          },
-          dedupeKey: `withdrawal-${payout.id}`,
-        }),
-      })
-    } catch (err) {
-      console.log("⚠️ Withdrawal notification failed:", err)
-    }
+    console.log("💼 Wallet updated")
 
     return new Response(
       JSON.stringify({
@@ -203,7 +227,9 @@ Deno.serve(async (req) => {
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
-  } catch (err) {
+  } catch (err: any) {
+    console.log("💥 WITHDRAWAL ERROR:", err)
+
     await supabase
       .from("wallets")
       .update({ payout_locked: false })
@@ -211,7 +237,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        error: "Withdrawal failed",
+        error: err.message,
         stripe_payout_id: createdStripePayoutId,
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

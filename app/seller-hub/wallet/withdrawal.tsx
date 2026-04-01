@@ -122,14 +122,18 @@ export default function WithdrawalScreen() {
         }
       )
 
-      if (error) {
-        handleAppError(error, {
-          context: "withdrawal_execute_function",
-          fallbackMessage: "Withdrawal failed. Please try again.",
-        })
-        setWithdrawing(false)
-        return
-      }
+     if (error) {
+  console.log("🚨 WITHDRAW ERROR RAW:", error)
+
+  // 🔥 ALWAYS SHOW FRIENDLY MESSAGE FOR WITHDRAW FAIL
+ Alert.alert(
+  "Funds Processing",
+  "Your funds are safe.\n\nThey are currently being processed and are usually ready to withdraw within 1–2 days after delivery.\n\nIf it takes longer than expected, please contact us at support@melomarketplace.app."
+)
+
+  setWithdrawing(false)
+  return
+}
 
       setWithdrawing(false)
 

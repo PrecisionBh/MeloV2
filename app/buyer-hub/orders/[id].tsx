@@ -199,50 +199,58 @@ export default function BuyerOrderDetailScreen() {
   /* ---------------- ACTIONS ---------------- */
 
   const confirmDelivery = async () => {
-    if (!order || processing) return
+  if (!order || processing) return
 
-    setProcessing(true)
+  setProcessing(true)
 
-    // Execute payout + completion flow via Edge Function
-    const { error } = await supabase.functions.invoke("execute-stripe-payout", {
-      body: {
-        order_id: order.id,
-        user_id: order.buyer_id,
-      },
+  // ✅ STEP 1: mark delivery confirmed
+  await supabase
+    .from("orders")
+    .update({
+      delivery_confirmed_by: session?.user?.id,
     })
+    .eq("id", order.id)
 
-    if (error) {
-      handleAppError(error, {
-        fallbackMessage:
-          "Unable to release funds right now. Please try again shortly.",
-      })
-      setProcessing(false)
-      return
-    }
-
-    setConfirmVisible(false)
-    setProcessing(false)
-
-    try {
-  await supabase.functions.invoke("send-notification", {
+  // ✅ STEP 2: execute payout
+  const { error } = await supabase.functions.invoke("execute-stripe-payout", {
     body: {
-      userId: order.seller_id,
-      type: "order",
-      title: "Order completed",
-      body: "The buyer confirmed delivery. Funds have been released.",
-      data: {
-        route: "/seller-hub/orders/[id]",
-        params: { id: order.id },
-      },
-      dedupeKey: `order-completed-${order.id}`, // 🔥 unique event key
+      order_id: order.id,
+      user_id: order.buyer_id,
     },
   })
-} catch (err) {
-  console.log("⚠️ order completed notification failed (non-blocking):", err)
-}
 
-    router.replace("/buyer-hub/orders/completed")
+  if (error) {
+    handleAppError(error, {
+      fallbackMessage:
+        "Unable to release funds right now. Please try again shortly.",
+    })
+    setProcessing(false)
+    return
   }
+
+  setConfirmVisible(false)
+  setProcessing(false)
+
+  try {
+    await supabase.functions.invoke("send-notification", {
+      body: {
+        userId: order.seller_id,
+        type: "order",
+        title: "Order completed",
+        body: "The buyer confirmed delivery. Funds have been released.",
+        data: {
+          route: "/seller-hub/orders/[id]",
+          params: { id: order.id },
+        },
+        dedupeKey: `order-completed-${order.id}`,
+      },
+    })
+  } catch (err) {
+    console.log("⚠️ order completed notification failed (non-blocking):", err)
+  }
+
+  router.replace("/buyer-hub/orders/completed")
+}
 
   const cancelOrder = async () => {
     if (!order || processing) return

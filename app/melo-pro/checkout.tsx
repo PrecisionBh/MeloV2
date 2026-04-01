@@ -33,8 +33,8 @@ export default function MeloProCheckoutScreen() {
         if (!offering) return
 
         const proPackage = offering.availablePackages.find(
-          (pkg) => pkg.product.identifier === "melo_pro_subscription"
-        )
+  (pkg) => pkg.product.identifier.includes("melo_pro_subscription")
+)
 
         if (!proPackage) return
 

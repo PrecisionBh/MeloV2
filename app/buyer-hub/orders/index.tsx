@@ -8,7 +8,6 @@ import { useAuth } from "@/context/AuthContext"
 import { handleAppError } from "@/lib/errors/appError"
 import { supabase } from "@/lib/supabase"
 
-
 export default function BuyerOrdersHubScreen() {
   const router = useRouter()
   const { session } = useAuth()
@@ -27,44 +26,57 @@ export default function BuyerOrdersHubScreen() {
     }, [buyerId])
   )
 
-  const loadInProgressCount = async () => {
-    if (!buyerId) return
+  /* ---------------- IN PROGRESS COUNT ---------------- */
 
-    const { count, error } = await supabase
+  const loadInProgressCount = async () => {
+  if (!buyerId) return
+
+  try {
+    // ✅ Base statuses
+    const { count: baseCount, error: baseError } = await supabase
       .from("orders")
       .select("id", { count: "exact", head: true })
       .eq("buyer_id", buyerId)
       .in("status", [
         "paid",
         "shipped",
-        "delivered",
         "return_started",
         "return_processing",
-        "in_dispute",
-        "pending_payment",
       ])
 
-    if (error) {
-      handleAppError(error, {
-        fallbackMessage: "Failed to load order counts.",
-        context: "BuyerOrdersHubScreen.loadInProgressCount",
-        silent: true,
-      })
-      setInProgressCount(0)
-      return
-    }
+    if (baseError) throw baseError
 
-    setInProgressCount(count ?? 0)
+    // ✅ Delivered but NOT completed
+    const { count: deliveredCount, error: deliveredError } = await supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("buyer_id", buyerId)
+      .eq("status", "delivered")
+      .is("completed_at", null)
+
+    if (deliveredError) throw deliveredError
+
+    setInProgressCount((baseCount ?? 0) + (deliveredCount ?? 0))
+  } catch (error) {
+    handleAppError(error, {
+      fallbackMessage: "Failed to load order counts.",
+      context: "BuyerOrdersHubScreen.loadInProgressCount",
+      silent: true,
+    })
+    setInProgressCount(0)
   }
+}
+
+  /* ---------------- DISPUTES COUNT ---------------- */
 
   const loadOpenDisputesCount = async () => {
     if (!buyerId) return
 
     const { count, error } = await supabase
-      .from("disputes")
+      .from("orders")
       .select("id", { count: "exact", head: true })
       .eq("buyer_id", buyerId)
-      .eq("status", "open")
+      .eq("is_disputed", true)
 
     if (error) {
       handleAppError(error, {
@@ -72,7 +84,7 @@ export default function BuyerOrdersHubScreen() {
         context: "BuyerOrdersHubScreen.loadOpenDisputesCount",
         silent: true,
       })
-      setOpenDisputesCount(count ?? 0)
+      setOpenDisputesCount(0)
       return
     }
 
@@ -148,11 +160,7 @@ function MenuItem({
         </View>
       )}
 
-      <Ionicons
-        name="chevron-forward"
-        size={18}
-        color="#9FB8AC"
-      />
+      <Ionicons name="chevron-forward" size={18} color="#9FB8AC" />
     </TouchableOpacity>
   )
 }

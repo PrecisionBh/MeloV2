@@ -74,11 +74,12 @@ export default function ShippingAddress({
         </View>
       )}
 
-      {/* ADDRESS FORM (ALWAYS VISIBLE — PREFILL OR CLEAR CONTROLLED BY PARENT) */}
+      {/* FORM */}
       <>
         <TextInput
           style={styles.input}
           placeholder="Full Name *"
+          placeholderTextColor="#6B7280"
           value={name}
           onChangeText={setName}
         />
@@ -86,6 +87,7 @@ export default function ShippingAddress({
         <TextInput
           style={styles.input}
           placeholder="Address Line 1 *"
+          placeholderTextColor="#6B7280"
           value={line1}
           onChangeText={setLine1}
         />
@@ -93,6 +95,7 @@ export default function ShippingAddress({
         <TextInput
           style={styles.input}
           placeholder="Address Line 2 (Optional)"
+          placeholderTextColor="#6B7280"
           value={line2}
           onChangeText={setLine2}
         />
@@ -101,12 +104,15 @@ export default function ShippingAddress({
           <TextInput
             style={[styles.input, styles.half]}
             placeholder="City *"
+            placeholderTextColor="#6B7280"
             value={city}
             onChangeText={setCity}
           />
+
           <TextInput
             style={[styles.input, styles.half]}
             placeholder="State *"
+            placeholderTextColor="#6B7280"
             value={state}
             onChangeText={setState}
             autoCapitalize="characters"
@@ -116,6 +122,7 @@ export default function ShippingAddress({
         <TextInput
           style={styles.input}
           placeholder="ZIP Code *"
+          placeholderTextColor="#6B7280"
           value={postal}
           onChangeText={setPostal}
           keyboardType="numeric"
@@ -124,12 +131,13 @@ export default function ShippingAddress({
         <TextInput
           style={styles.input}
           placeholder="Phone (Recommended)"
+          placeholderTextColor="#6B7280"
           value={phone}
           onChangeText={setPhone}
           keyboardType="phone-pad"
         />
 
-        {/* SAVE DEFAULT TOGGLE */}
+        {/* SAVE DEFAULT */}
         <View style={styles.toggleRow}>
           <Text style={styles.toggleLabel}>
             Save as default shipping address
@@ -143,7 +151,7 @@ export default function ShippingAddress({
         </View>
       </>
 
-      {/* VALIDATION WARNING (ALWAYS CHECK FORM, NOT TOGGLE STATE) */}
+      {/* WARNING */}
       {isAddressIncomplete && (
         <View style={styles.warningBox}>
           <Ionicons name="alert-circle-outline" size={16} color="#8A5A00" />
@@ -183,7 +191,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#F6F7F6",
     borderRadius: 12,
     padding: 14,
-    fontSize: 15,
+    fontSize: 16, // ✅ iOS safe
+    lineHeight: 20,
+    color: "#111",
     marginBottom: 10,
     borderWidth: 1,
     borderColor: "#ECECEC",
