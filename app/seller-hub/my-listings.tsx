@@ -267,40 +267,71 @@ const megaBoostListing = async (listingId: string) => {
       if (error) throw error
       if (!oldListing) throw new Error("Listing not found")
 
-      const {
-        id: _,
-        created_at,
-        updated_at,
-        is_sold,
-        status,
-        is_boosted,
-        boost_expires_at,
-        ...rest
-      } = oldListing
+     const {
+  id: _,
+  created_at,
+  updated_at,
+  is_sold,
+  status,
+  is_boosted,
+  boost_expires_at,
+  is_mega_boost,
+  mega_boost_expires_at,
+  ...rest
+} = oldListing
 
-      // 🚀 CRITICAL: instantly remove from inactive list (prevents duplicates)
-      setListings((prev) => prev.filter((l) => l.id !== id))
+     const newQuantity = oldListing.quantity || 1
 
-      const { data: newListing, error: insertError } = await supabase
-        .from("listings")
-        .insert({
-          ...rest,
-          status: "active",
-          is_sold: false,
-          is_boosted: false,
-          boost_expires_at: null,
-          created_at: new Date().toISOString(),
-        })
-        .select()
-        .single()
+// ✅ SAFETY CHECK (prevents session error)
+if (!session?.user?.id) {
+  Alert.alert("Error", "User session not found.")
+  return
+}
 
-      if (insertError) throw insertError
+const { data: newListing, error: insertError } = await supabase
+  .from("listings")
+  .insert({
+    user_id: session.user.id,
+    title: oldListing.title,
+    description: oldListing.description,
+    sport_type: oldListing.sport_type,
+    brand: oldListing.brand,
+    category: oldListing.category,
+    condition: oldListing.condition,
+    price: oldListing.price,
+    allow_offers: oldListing.allow_offers,
+    min_offer: oldListing.allow_offers ? oldListing.min_offer : null,
+    shipping_type: oldListing.shipping_type,
+    shipping_price: oldListing.shipping_price,
+    image_urls: oldListing.image_urls,
 
-      if (newListing) {
-        setListings((prev) => [newListing as Listing, ...prev])
-      }
+    // ✅ force correct lifecycle
+    status: "active",
+    is_sold: false,
 
-      Alert.alert("Success", "Listing reactivated.")
+    // ✅ reset ALL boosts
+    is_boosted: false,
+    boost_expires_at: null,
+    is_mega_boost: false,
+    mega_boost_expires_at: null,
+
+    // ✅ reset inventory
+    quantity: newQuantity,
+    quantity_available: newQuantity,
+
+    // ✅ fresh timestamp
+    created_at: new Date().toISOString(),
+  })
+  .select()
+  .single()
+
+if (insertError) throw insertError
+
+if (newListing) {
+  setListings((prev) => [newListing as Listing, ...prev])
+}
+
+Alert.alert("Success", "Listing relisted successfully!")
     } catch (err) {
       handleAppError(err, {
         context: "my_listings_duplicate",

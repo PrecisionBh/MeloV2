@@ -17,19 +17,11 @@ import { useAuth } from "@/context/AuthContext"
 import { handleAppError } from "@/lib/errors/appError"
 import { supabase } from "@/lib/supabase"
 
-
-
 /* ---------------- TYPES ---------------- */
 
 type Wallet = {
   available_balance_cents: number
 }
-
-/* ---------------- CONSTANTS ---------------- */
-
-const INSTANT_FEE_RATE = 0.03
-const INSTANT_FEE_MIN = 0.75
-const INSTANT_FEE_CAP = 25.0
 
 /* ---------------- SCREEN ---------------- */
 
@@ -39,10 +31,9 @@ export default function WithdrawalScreen() {
 
   const [wallet, setWallet] = useState<Wallet | null>(null)
   const [rawAmount, setRawAmount] = useState("")
-  const [payoutType, setPayoutType] = useState<"instant" | "standard">(
-    "instant"
-  )
   const [withdrawing, setWithdrawing] = useState(false)
+
+  const payoutType: "standard" = "standard"
 
   /* ---------------- LOAD WALLET ---------------- */
 
@@ -89,17 +80,7 @@ export default function WithdrawalScreen() {
   const isValidAmount =
     numericAmount > 0 && numericAmount <= available
 
-  /* ---------------- FEES (DISPLAY ONLY) ---------------- */
-
-  const instantFee =
-    payoutType === "instant"
-      ? Math.min(
-          Math.max(numericAmount * INSTANT_FEE_RATE, INSTANT_FEE_MIN),
-          INSTANT_FEE_CAP
-        )
-      : 0
-
-  const netDeposit = numericAmount - instantFee
+  const netDeposit = numericAmount
 
   /* ---------------- SUBMIT ---------------- */
 
@@ -122,26 +103,23 @@ export default function WithdrawalScreen() {
         }
       )
 
-     if (error) {
-  console.log("🚨 WITHDRAW ERROR RAW:", error)
+      if (error) {
+        console.log("🚨 WITHDRAW ERROR RAW:", error)
 
-  // 🔥 ALWAYS SHOW FRIENDLY MESSAGE FOR WITHDRAW FAIL
- Alert.alert(
-  "Funds Processing",
-  "Your funds are safe.\n\nThey are currently being processed and are usually ready to withdraw within 1–2 days after delivery.\n\nIf it takes longer than expected, please contact us at support@melomarketplace.app."
-)
+        Alert.alert(
+          "Funds Processing",
+          "Your funds are safe.\n\nThey are currently being processed and are usually ready to withdraw within 1–2 days after delivery.\n\nIf it takes longer than expected, please contact us at support@melomarketplace.app."
+        )
 
-  setWithdrawing(false)
-  return
-}
+        setWithdrawing(false)
+        return
+      }
 
       setWithdrawing(false)
 
       Alert.alert(
         "Success",
-        payoutType === "instant"
-          ? "Your instant payout is processing."
-          : "Your payout will arrive in 3–5 business days."
+        "Your payout is on the way and will arrive in 3–5 business days."
       )
 
       await loadWallet()
@@ -162,14 +140,10 @@ export default function WithdrawalScreen() {
       style={{ flex: 1, backgroundColor: "#EAF4EF" }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      {/* HEADER */}
-      <AppHeader
-  title="Withdraw"
-/>
-
+      <AppHeader title="Withdraw" />
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* AVAILABLE */}
+        {/* BALANCE */}
         <View style={styles.balanceBlock}>
           <Text style={styles.cardLabel}>Available balance</Text>
           <Text style={styles.primaryValue}>
@@ -199,11 +173,7 @@ export default function WithdrawalScreen() {
 
           <View style={styles.row}>
             <Text>Melo processing fee</Text>
-            <Text>
-              {instantFee > 0
-                ? `-$${instantFee.toFixed(2)}`
-                : "$0.00"}
-            </Text>
+            <Text>$0.00</Text>
           </View>
 
           <View style={styles.divider} />
@@ -215,71 +185,25 @@ export default function WithdrawalScreen() {
             </Text>
           </View>
 
-          {payoutType === "instant" && (
-            <Text style={styles.helperText}>
-              Instant deposits arrive in minutes. Fee capped at $25.
-            </Text>
-          )}
+          <Text style={styles.helperText}>
+            Standard payouts typically arrive within 3–5 business days depending on your bank.
+          </Text>
         </View>
 
-        {/* PAYOUT TYPE */}
-        <View style={styles.payoutRow}>
-          <TouchableOpacity
-            style={[
-              styles.payoutOption,
-              payoutType === "instant"
-                ? styles.payoutActive
-                : styles.payoutInactive,
-            ]}
-            onPress={() => setPayoutType("instant")}
-          >
-            <Text
-              style={[
-                styles.payoutTitle,
-                payoutType !== "instant" && styles.mutedText,
-              ]}
-            >
-              Instant
-            </Text>
-            <Text
-              style={[
-                styles.payoutSub,
-                payoutType !== "instant" && styles.mutedText,
-              ]}
-            >
-              Paid in minutes
-            </Text>
-          </TouchableOpacity>
+        {/* PAYOUT METHOD */}
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>Payout method</Text>
 
-          <TouchableOpacity
-            style={[
-              styles.payoutOption,
-              payoutType === "standard"
-                ? styles.payoutActive
-                : styles.payoutInactive,
-            ]}
-            onPress={() => setPayoutType("standard")}
-          >
-            <Text
-              style={[
-                styles.payoutTitle,
-                payoutType !== "standard" && styles.mutedText,
-              ]}
-            >
-              Standard
-            </Text>
-            <Text
-              style={[
-                styles.payoutSub,
-                payoutType !== "standard" && styles.mutedText,
-              ]}
-            >
-              3–5 days · Free
-            </Text>
-          </TouchableOpacity>
+          <Text style={{ fontWeight: "900", fontSize: 16 }}>
+            Standard Payout
+          </Text>
+
+          <Text style={styles.helperText}>
+            Deposits typically arrive within 3–5 business days.
+          </Text>
         </View>
 
-        {/* SUBMIT */}
+        {/* BUTTON */}
         <TouchableOpacity
           style={[
             styles.submitBtn,
@@ -292,6 +216,19 @@ export default function WithdrawalScreen() {
             {withdrawing ? "Processing…" : "Withdraw funds"}
           </Text>
         </TouchableOpacity>
+
+        {/* DISCLAIMER */}
+        <Text style={[styles.helperText, { textAlign: "center", marginTop: 8 }]}>
+          Payouts typically take 3–5 business days to arrive.
+        </Text>
+
+        {/* INSTANT COMING SOON */}
+        <View style={styles.instantCard}>
+          <Text style={styles.instantTitle}>⚡ Instant Payouts</Text>
+          <Text style={styles.helperText}>
+            Coming soon. Instant payouts will unlock automatically after account activity.
+          </Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   )
@@ -300,7 +237,6 @@ export default function WithdrawalScreen() {
 /* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
-
   content: { padding: 16, gap: 16 },
 
   balanceBlock: { alignItems: "center" },
@@ -350,44 +286,6 @@ const styles = StyleSheet.create({
     color: "#6B8F7D",
   },
 
-  payoutRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-
-  payoutOption: {
-    flex: 1,
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: "center",
-    borderWidth: 1,
-  },
-
-  payoutActive: {
-    backgroundColor: "#CFE7DD",
-    borderColor: "#1F7A63",
-  },
-
-  payoutInactive: {
-    backgroundColor: "#F1F1F1",
-    borderColor: "#D0D0D0",
-  },
-
-  payoutTitle: {
-    fontWeight: "900",
-    color: "#0F1E17",
-  },
-
-  payoutSub: {
-    fontSize: 12,
-    marginTop: 2,
-    color: "#6B8F7D",
-  },
-
-  mutedText: {
-    color: "#9AA5A0",
-  },
-
   submitBtn: {
     backgroundColor: "#1F7A63",
     paddingVertical: 16,
@@ -400,5 +298,24 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#fff",
     fontSize: 16,
+  },
+
+  instantCard: {
+  backgroundColor: "#fff",
+  borderRadius: 16,
+  padding: 14,
+  marginTop: 12,
+  marginBottom: 66, // ✅ adds breathing room from bottom
+  borderWidth: 1,
+  borderColor: "#E6EFEA",
+
+  // ✅ reinforce bottom edge
+  borderBottomWidth: 2,
+  borderBottomColor: "#DDE7E2",
+},
+
+  instantTitle: {
+    fontWeight: "900",
+    fontSize: 14,
   },
 })
