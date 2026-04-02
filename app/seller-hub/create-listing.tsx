@@ -5,6 +5,7 @@ import CreateListingFooter from "@/components/create-listing/CreateListingFooter
 import FullScreenSelector from "@/components/create-listing/FullScreenSelector"
 import ImageUpload from "@/components/create-listing/ImageUpload"
 import PriceOffersSection from "@/components/create-listing/PriceOffersSection"
+import Quantity from "@/components/create-listing/Quantity"
 import ShippingSection from "@/components/create-listing/ShippingSection"
 import TitleDescriptionSection from "@/components/create-listing/TitleDescriptionSection"
 import ReturnAddressRequiredModal from "@/components/modals/ReturnAddressRequiredModal"
@@ -580,14 +581,14 @@ return (
 <View style={styles.screen}>
   <AppHeader title="Create Listing" backRoute="/seller-hub" />
 
-  {!checkingPro && !isPro && (
-  <UpgradeToProCard
-    style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 4 }}
-  />
-)}
-
   {hasReturnAddress && (
     <ScrollView contentContainerStyle={styles.content}>
+
+      {!checkingPro && !isPro && (
+  <UpgradeToProCard
+    style={{ marginHorizontal: 2, marginTop: 6, marginBottom: 8}}
+  />
+)}
       <ImageUpload images={images} setImages={setImages} max={5} />
 
       <TitleDescriptionSection
@@ -687,6 +688,12 @@ return (
   
 
       </View>
+
+      {isPro && (
+  <View style={styles.sectionSpacing}>
+    <Quantity quantity={quantity} setQuantity={setQuantity} />
+  </View>
+)}
 
       <View style={styles.sectionSpacing}>
         <ShippingSection

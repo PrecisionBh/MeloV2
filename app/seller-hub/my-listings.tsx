@@ -280,7 +280,9 @@ const megaBoostListing = async (listingId: string) => {
   ...rest
 } = oldListing
 
-     const newQuantity = oldListing.quantity || 1
+    const newQuantity = isPro
+  ? (oldListing.quantity || 1)
+  : 1
 
 // ✅ SAFETY CHECK (prevents session error)
 if (!session?.user?.id) {

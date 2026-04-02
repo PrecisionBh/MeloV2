@@ -11,7 +11,7 @@ type Props = {
   style?: any
 }
 
-export default function UpgradeToProButton({ variant = "full", style }: Props) {
+export default function UpgradeToProCard({ variant = "full", style }: Props) {
   const router = useRouter()
   const { session } = useAuth()
   const userId = session?.user?.id
@@ -96,7 +96,7 @@ export default function UpgradeToProButton({ variant = "full", style }: Props) {
 
           {/* ✅ UPDATED TO MATCH BACKEND */}
           <Text style={styles.subtitle}>
-            $24.99/mo • 5 Boosts + 1 Mega Boost • Lower 3.5% seller fees • Track payouts • Sell multiple quantities
+            $24.99/mo • 5 Boosts + 1 Mega Boost • Lower 3.5% seller fees • Track payouts • Sell multiple quantities • Unlimited Listings
           </Text>
         </View>
 

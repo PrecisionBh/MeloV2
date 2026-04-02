@@ -6,6 +6,7 @@ import CreateListingFooter from "@/components/create-listing/CreateListingFooter
 import FullScreenSelector from "@/components/create-listing/FullScreenSelector"
 import ImageUpload from "@/components/create-listing/ImageUpload"
 import PriceOffersSection from "@/components/create-listing/PriceOffersSection"
+import Quantity from "@/components/create-listing/Quantity"
 import ShippingSection from "@/components/create-listing/ShippingSection"
 import TitleDescriptionSection from "@/components/create-listing/TitleDescriptionSection"
 import ReturnAddressRequiredModal from "@/components/modals/ReturnAddressRequiredModal"
@@ -358,6 +359,7 @@ const [originalMegaBoosted, setOriginalMegaBoosted] = useState(false)
 
   const [quantity, setQuantity] = useState("1")
 
+const [isPro, setIsPro] = useState(false)
   const [boostsRemaining, setBoostsRemaining] = useState(0)
   const [megaBoostsRemaining, setMegaBoostsRemaining] = useState(0)
 
@@ -412,10 +414,11 @@ useEffect(() => {
 
       const { data: profile } = await supabase
   .from("profiles")
-  .select("boosts_remaining, mega_boosts_remaining")
+  .select("is_pro, boosts_remaining, mega_boosts_remaining")
   .eq("id", session.user.id)
   .single()
 
+setIsPro(Boolean(profile?.is_pro))
 setBoostsRemaining(profile?.boosts_remaining ?? 0)
 setMegaBoostsRemaining(profile?.mega_boosts_remaining ?? 0)
 
@@ -827,6 +830,12 @@ return (
 
         </View>
       </View>
+
+      {isPro && (
+  <View style={styles.sectionSpacing}>
+    <Quantity quantity={quantity} setQuantity={setQuantity} />
+  </View>
+)}
 
       <View style={styles.sectionSpacing}>
         <ShippingSection
