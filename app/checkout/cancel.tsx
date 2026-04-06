@@ -2,11 +2,11 @@ import { Ionicons } from "@expo/vector-icons"
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { useEffect, useState } from "react"
 import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native"
 
 import AppHeader from "@/components/app-header"
@@ -144,7 +144,7 @@ export default function CheckoutCancelScreen() {
             {/* Back to Home */}
             <TouchableOpacity
               style={styles.homeButton}
-              onPress={() => router.replace("/")}
+              onPress={() => router.replace("/home")}
             >
               <Text style={styles.homeText}>Return to Home</Text>
             </TouchableOpacity>

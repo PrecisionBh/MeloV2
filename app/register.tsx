@@ -116,7 +116,7 @@ export default function RegisterScreen() {
         "Account Created",
         "Your account has been created successfully."
       )
-      router.replace("/")
+      router.replace("/home")
     } catch (err) {
       handleAppError(err, {
         context: "auth_register",

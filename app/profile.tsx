@@ -89,10 +89,10 @@ export default function ProfileScreen() {
     <View style={styles.screen}>
       {/* GLOBAL MELO HEADER (WITH BACK TO HOME) */}
       <AppHeader
-        title="Profile"
-        backLabel="Home"
-        backRoute="/"
-      />
+  title="Profile"
+  backLabel="Home"
+  backRoute="/home"
+/>
 
       {/* PROFILE CARD */}
       <View style={styles.profileCard}>
@@ -185,7 +185,7 @@ export default function ProfileScreen() {
       {/* BACK (UNCHANGED - kept as requested) */}
       <TouchableOpacity
         style={styles.backBtn}
-        onPress={() => router.replace("/")}
+        onPress={() => router.replace("/home")}
       >
         <Text style={styles.backText}>← Back to Home</Text>
       </TouchableOpacity>

@@ -23,15 +23,11 @@ export default function SignInScreen() {
   const [loading, setLoading] = useState(false)
   const [bannedMessage, setBannedMessage] = useState<string | null>(null)
 
-  // Prevent setState on unmounted component
   const mountedRef = useRef(true)
 
   useEffect(() => {
-    console.log("[AUTH] SignInScreen mounted")
     mountedRef.current = true
-
     return () => {
-      console.log("[AUTH] SignInScreen unmounted")
       mountedRef.current = false
     }
   }, [])
@@ -40,41 +36,22 @@ export default function SignInScreen() {
   const isFormValid = normalizedEmail.length > 0 && password.length > 0
 
   const handleEmailLogin = async () => {
-    console.log("[AUTH] Sign in button pressed")
-    console.log("[AUTH] Raw email input:", email)
-    console.log("[AUTH] Normalized email:", normalizedEmail)
-    console.log("[AUTH] Form valid:", isFormValid)
-    console.log("[AUTH] Current loading state:", loading)
-
-    if (!isFormValid || loading) {
-      console.log("[AUTH] Login blocked - invalid form or already loading")
-      return
-    }
+    if (!isFormValid || loading) return
 
     try {
-      console.log("[AUTH] Starting login process...")
       setLoading(true)
-      setBannedMessage(null) // reset any previous ban message
+      setBannedMessage(null)
       Keyboard.dismiss()
-
-      console.log("[AUTH] Calling supabase.auth.signInWithPassword...")
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
         password,
       })
 
-      console.log("[AUTH] Supabase response received")
-      console.log("[AUTH] Session user:", data?.user?.id ?? "NO USER")
-      console.log("[AUTH] Session exists:", !!data?.session)
-      console.log("[AUTH] Error object:", error)
-
       if (error) {
-        console.log("[AUTH] Login error message:", error.message)
         const msg = (error.message || "").toLowerCase()
 
         if (msg.includes("email not confirmed")) {
-          console.log("[AUTH] Email not confirmed case triggered")
           Alert.alert(
             "Confirm your email",
             "Please check your inbox and confirm your email before signing in."
@@ -87,38 +64,25 @@ export default function SignInScreen() {
           msg.includes("invalid") ||
           msg.includes("credentials")
         ) {
-          console.log("[AUTH] Invalid credentials detected")
           Alert.alert("Sign in failed", "Email or password is incorrect.")
           return
         }
 
-        console.log("[AUTH] Throwing unexpected auth error")
         throw error
       }
 
-      // 🚫 HARD BAN CHECK (BLOCK BEFORE HOME NAVIGATION)
       const userId = data?.user?.id
 
       if (userId) {
-        console.log("[AUTH] Running post-login ban check for:", userId)
-
-        const { data: profile, error: banError } = await supabase
+        const { data: profile } = await supabase
           .from("profiles")
           .select("is_banned")
           .eq("id", userId)
           .single()
 
-        if (banError) {
-          console.log("[AUTH] Ban check error:", banError.message)
-        }
-
         if (profile?.is_banned === true) {
-          console.log("[AUTH] 🚫 BANNED USER DETECTED - BLOCKING LOGIN ACCESS")
-
-          // Force logout immediately
           await supabase.auth.signOut()
 
-          // Show red inline banned message
           if (mountedRef.current) {
             setBannedMessage(
               "This account has been banned for not following our terms and policies."
@@ -126,50 +90,37 @@ export default function SignInScreen() {
             setLoading(false)
           }
 
-          return // ⛔ STOP HERE — DO NOT NAVIGATE TO HOME
+          return
         }
       }
-
-      console.log("[AUTH] Login SUCCESS - clearing inputs")
 
       if (mountedRef.current) {
         setEmail("")
         setPassword("")
-      } else {
-        console.log("[AUTH] Component unmounted before clearing inputs")
       }
 
-      console.log("[AUTH] User cleared ban check — navigating to /home")
       router.replace("/home")
     } catch (err) {
-      console.log("[AUTH] CATCH BLOCK TRIGGERED")
-      console.log("[AUTH] Error:", err)
       handleAppError(err, {
         fallbackMessage: "Sign in failed. Please try again.",
       })
     } finally {
-      console.log("[AUTH] Login finally block - stopping loader")
       if (mountedRef.current) {
         setLoading(false)
-      } else {
-        console.log("[AUTH] Skipped setLoading(false) because unmounted")
       }
     }
   }
 
   return (
-  <KeyboardWrapper contentContainerStyle={styles.screen}>
-      {/* BRANDING */}
+    <KeyboardWrapper contentContainerStyle={styles.screen}>
       <View style={styles.branding}>
         <Text style={styles.brandTitle}>MELO</Text>
         <Text style={styles.subtitle}>Your Sports Only Marketplace</Text>
       </View>
 
-      {/* CARD */}
       <View style={styles.card}>
         <Text style={styles.title}>Sign In</Text>
 
-        {/* 🚫 RED BANNED MESSAGE */}
         {bannedMessage && (
           <View style={styles.bannedBox}>
             <Text style={styles.bannedText}>{bannedMessage}</Text>
@@ -184,10 +135,7 @@ export default function SignInScreen() {
           autoCorrect={false}
           keyboardType="email-address"
           value={email}
-          onChangeText={(text) => {
-            console.log("[AUTH] Email input changed:", text)
-            setEmail(text)
-          }}
+          onChangeText={setEmail}
           returnKeyType="next"
         />
 
@@ -198,19 +146,13 @@ export default function SignInScreen() {
             placeholderTextColor="#6B8F82"
             secureTextEntry={!showPassword}
             value={password}
-            onChangeText={(text) => {
-              console.log("[AUTH] Password input length:", text.length)
-              setPassword(text)
-            }}
+            onChangeText={setPassword}
             returnKeyType="done"
             onSubmitEditing={handleEmailLogin}
           />
 
           <TouchableOpacity
-            onPress={() => {
-              console.log("[AUTH] Toggle password visibility")
-              setShowPassword((p) => !p)
-            }}
+            onPress={() => setShowPassword((p) => !p)}
             disabled={loading}
           >
             <Text style={styles.eye}>{showPassword ? "🙈" : "👁️"}</Text>
@@ -218,10 +160,7 @@ export default function SignInScreen() {
         </View>
 
         <TouchableOpacity
-          onPress={() => {
-            console.log("[AUTH] Navigating to forgot password")
-            router.push("/forgot-password")
-          }}
+          onPress={() => router.push("/forgot-password")}
           style={{ alignSelf: "flex-end", marginBottom: 12 }}
           disabled={loading}
         >
@@ -254,10 +193,7 @@ export default function SignInScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => {
-            console.log("[AUTH] Navigating to register")
-            router.push("/register")
-          }}
+          onPress={() => router.push("/register")}
           disabled={loading}
         >
           <Text style={styles.link}>
@@ -267,7 +203,6 @@ export default function SignInScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* FOOTER */}
       <View style={styles.footerContainer}>
         <Text style={styles.footerText}>
           Partnered With Precision Sports LLC
@@ -283,13 +218,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 24,
     justifyContent: "flex-start",
-paddingTop: 80,
   },
 
   branding: {
     alignItems: "center",
     marginBottom: 28,
-    transform: [{ translateY: -40 }],
   },
 
   brandTitle: {
@@ -326,7 +259,6 @@ paddingTop: 80,
     color: "#2E5F4F",
   },
 
-  // 🔴 BANNED MESSAGE STYLES
   bannedBox: {
     backgroundColor: "#FFE5E5",
     borderWidth: 1,

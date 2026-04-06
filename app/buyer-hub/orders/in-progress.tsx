@@ -118,7 +118,7 @@ export default function BuyerInProgressOrdersScreen() {
 
           <TouchableOpacity
             style={styles.browseBtn}
-            onPress={() => router.replace("/")}
+            onPress={() => router.replace("/home")}
           >
             <Text style={styles.browseText}>Browse Listings</Text>
           </TouchableOpacity>

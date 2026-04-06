@@ -31,7 +31,7 @@ export default function AppHeader({
 
   // 🏠 HOME BUTTON (instant jump to root without stacking history)
   const handleHome = () => {
-    router.replace("/")
+    router.replace("/home")
   }
 
   return (

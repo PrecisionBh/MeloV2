@@ -709,7 +709,10 @@ const styles = StyleSheet.create({
 if (checkingAddress || loadingListing) {
   return (
     <View style={styles.screen}>
-      <AppHeader title="Edit Listing" backRoute="/seller-hub" />
+      <AppHeader
+        title="Edit Listing"
+        onBack={() => router.back()} // ✅ THIS IS THE FIX
+      />
       <View style={styles.loaderWrap}>
         <ActivityIndicator size="large" color="#7FAF9B" />
       </View>
@@ -728,7 +731,10 @@ const showAlreadyBoosted = () => {
 
 return (
   <View style={styles.screen}>
-    <AppHeader title="Edit Listing" backRoute="/seller-hub" />
+    <AppHeader
+  title="Edit Listing"
+  onBack={() => router.back()}
+/>
 
     <ScrollView contentContainerStyle={styles.content}>
       <ImageUpload images={images} setImages={setImages} max={5} />

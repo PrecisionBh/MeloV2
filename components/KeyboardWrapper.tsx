@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from "react"
+import React from "react"
 import {
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    TouchableWithoutFeedback,
-    ViewStyle,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TouchableWithoutFeedback,
+  ViewStyle,
 } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 
 type Props = {
   children: React.ReactNode
@@ -17,44 +18,27 @@ export default function KeyboardWrapper({
   children,
   contentContainerStyle,
 }: Props) {
-  const [keyboardVisible, setKeyboardVisible] = useState(false)
-
-  useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", () =>
-      setKeyboardVisible(true)
-    )
-    const hideSub = Keyboard.addListener("keyboardDidHide", () =>
-      setKeyboardVisible(false)
-    )
-
-    return () => {
-      showSub.remove()
-      hideSub.remove()
-    }
-  }, [])
-
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={
-        Platform.OS === "ios" && keyboardVisible ? "padding" : undefined
-      }
-      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[
-            {
-              flexGrow: 1,
-              paddingBottom: keyboardVisible ? 120 : 0,
-            },
-            contentContainerStyle,
-          ]}
-        >
-          {children}
-        </ScrollView>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+    <SafeAreaView style={{ flex: 1 }} edges={["top", "left", "right"]}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={[
+              {
+                flexGrow: 1,
+                paddingBottom: 40,
+              },
+              contentContainerStyle,
+            ]}
+          >
+            {children}
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   )
 }

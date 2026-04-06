@@ -191,7 +191,7 @@ export default function CheckoutSuccessScreen() {
 
           <TouchableOpacity
             style={styles.secondaryBtn}
-            onPress={() => router.replace("/")}
+            onPress={() => router.replace("/home")}
           >
             <Text style={styles.secondaryText}>
               Continue Browsing
@@ -286,7 +286,7 @@ export default function CheckoutSuccessScreen() {
 
           <TouchableOpacity
             style={styles.secondaryBtn}
-            onPress={() => router.replace("/")}
+            onPress={() => router.replace("/home")}
           >
             <Text style={styles.secondaryText}>
               Continue Browsing

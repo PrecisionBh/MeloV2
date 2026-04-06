@@ -154,7 +154,7 @@ export default function MeloProSuccessScreen() {
 
             <TouchableOpacity
               style={styles.secondaryBtn}
-              onPress={() => router.replace("/")}
+              onPress={() => router.replace("/home")}
             >
               <Text style={styles.secondaryText}>
                 Back to Marketplace

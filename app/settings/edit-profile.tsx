@@ -19,7 +19,7 @@ import ReturnAddressCard from "@/components/profile/ReturnAddressCard"
 import { useAuth } from "../../context/AuthContext"
 import { handleAppError } from "../../lib/errors/appError"
 import { supabase } from "../../lib/supabase"
-
+                  
 export default function EditProfileScreen() {
   const router = useRouter()
   const { session } = useAuth()
@@ -167,7 +167,7 @@ export default function EditProfileScreen() {
         throw new Error("Failed to retrieve public URL")
       }
 
-      setAvatarUrl(urlData.publicUrl)
+      setAvatarUrl(`${urlData.publicUrl}?t=${Date.now()}`)
     } catch (err) {
       handleAppError(err, {
         context: "edit_profile_avatar_upload",
@@ -222,9 +222,13 @@ export default function EditProfileScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 60 }}
-        showsVerticalScrollIndicator={false}
-      >
+  contentContainerStyle={{
+    paddingBottom: 450, // 👈 THIS IS THE FIX
+    flexGrow: 1,
+  }}
+  keyboardShouldPersistTaps="handled"
+  showsVerticalScrollIndicator={false}
+>
         {/* ✅ MELO PRO */}
         <View style={styles.proWrap}>
           <View style={styles.proHeaderRow}>
@@ -346,7 +350,7 @@ const styles = StyleSheet.create({
     width: 110,
     height: 110,
     borderRadius: 55,
-    backgroundColor: "#24352D",
+   backgroundColor: "#EAF4EF",
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
