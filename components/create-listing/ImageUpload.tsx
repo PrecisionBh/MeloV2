@@ -1,9 +1,12 @@
 import { Ionicons } from "@expo/vector-icons"
 import * as ImageManipulator from "expo-image-manipulator"
 import * as ImagePicker from "expo-image-picker"
+import { useState } from "react"
 import {
   Alert,
   Image,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,8 +27,14 @@ export default function ImageUpload({
   setImages,
   max = 7,
 }: Props) {
+  const [showPicker, setShowPicker] = useState(false)
+
+  /* ---------------- LIBRARY ---------------- */
+
   const pickImage = async () => {
     try {
+      setShowPicker(false)
+
       if (images.length >= max) {
         Alert.alert("Limit reached", `You can upload up to ${max} photos.`)
         return
@@ -41,7 +50,6 @@ export default function ImageUpload({
       })
 
       if (!result.canceled && result.assets?.length > 0) {
-
         const convertedUris = await Promise.all(
           result.assets.map(async (asset) => {
             const converted = await ImageManipulator.manipulateAsync(
@@ -52,7 +60,6 @@ export default function ImageUpload({
                 format: ImageManipulator.SaveFormat.JPEG,
               }
             )
-
             return converted.uri
           })
         )
@@ -65,10 +72,58 @@ export default function ImageUpload({
     } catch (err) {
       handleAppError(err, {
         context: "image_upload_picker",
-        fallbackMessage: "Failed to select images. Please try again.",
       })
     }
   }
+
+  /* ---------------- CAMERA ---------------- */
+
+  const takePhoto = async () => {
+    try {
+      setShowPicker(false)
+
+      if (images.length >= max) {
+        Alert.alert("Limit reached", `You can upload up to ${max} photos.`)
+        return
+      }
+
+      const permission = await ImagePicker.requestCameraPermissionsAsync()
+
+      if (!permission.granted) {
+        Alert.alert("Permission required", "Enable camera access.")
+        return
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ["images"],
+        quality: 0.35,
+      })
+
+      if (!result.canceled && result.assets?.length > 0) {
+        const asset = result.assets[0]
+
+        const converted = await ImageManipulator.manipulateAsync(
+          asset.uri,
+          [{ resize: { width: 1200 } }],
+          {
+            compress: 0.25,
+            format: ImageManipulator.SaveFormat.JPEG,
+          }
+        )
+
+        setImages((prev) => {
+          const combined = [...prev, converted.uri]
+          return combined.slice(0, max)
+        })
+      }
+    } catch (err) {
+      handleAppError(err, {
+        context: "image_upload_camera",
+      })
+    }
+  }
+
+  /* ---------------- REMOVE ---------------- */
 
   const removeImage = (uri: string) => {
     setImages((prev) => prev.filter((img) => img !== uri))
@@ -111,8 +166,7 @@ export default function ImageUpload({
               <TouchableOpacity
                 key={`empty-${i}`}
                 style={styles.addSquare}
-                onPress={pickImage}
-                activeOpacity={0.85}
+                onPress={() => setShowPicker(true)}
               >
                 <Ionicons
                   name={isFirstSlot ? "camera-outline" : "add"}
@@ -124,73 +178,89 @@ export default function ImageUpload({
           })}
         </ScrollView>
       </View>
+
+      {/* 🔥 CUSTOM MODAL */}
+      <Modal
+        visible={showPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPicker(false)}
+      >
+        <Pressable style={styles.overlay} onPress={() => setShowPicker(false)}>
+          <View style={styles.modal}>
+            <TouchableOpacity style={styles.option} onPress={takePhoto}>
+              <Ionicons name="camera" size={20} color="#0F1E17" />
+              <Text style={styles.optionText}>Take Photo</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.option} onPress={pickImage}>
+              <Ionicons name="images" size={20} color="#0F1E17" />
+              <Text style={styles.optionText}>Choose from Library</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.option, styles.cancel]}
+              onPress={() => setShowPicker(false)}
+            >
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   )
 }
+
+/* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
   fullBleedSection: {
     marginHorizontal: -16,
     backgroundColor: "#EEF6F2",
   },
-
   inner: {
     paddingTop: 16,
     paddingBottom: 18,
   },
-
   title: {
     fontSize: 16,
     fontWeight: "800",
     color: "#0F1E17",
     paddingHorizontal: 16,
-    marginBottom: 2,
   },
-
   subText: {
     fontSize: 12,
     color: "#323232",
     paddingHorizontal: 16,
     marginBottom: 12,
   },
-
   divider: {
     height: 1,
     backgroundColor: "#DCEAE4",
-    width: "100%",
     marginBottom: 14,
   },
-
   row: {
     flexDirection: "row",
-    alignItems: "center",
     paddingHorizontal: 16,
     gap: 12,
   },
-
   squareWrapper: {
     width: 120,
     height: 120,
-    position: "relative",
   },
-
   squareImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 0,
   },
-
   addSquare: {
     width: 120,
     height: 120,
     borderWidth: 1,
     borderColor: "#CFE3DA",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 0,
   },
-
   deleteButton: {
     position: "absolute",
     top: 6,
@@ -201,5 +271,39 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  /* MODAL */
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modal: {
+    width: "80%",
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 16,
+  },
+  option: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+  },
+  optionText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0F1E17",
+  },
+  cancel: {
+    justifyContent: "center",
+    marginTop: 6,
+  },
+  cancelText: {
+    textAlign: "center",
+    fontWeight: "700",
+    color: "#999",
   },
 })

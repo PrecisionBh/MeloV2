@@ -60,7 +60,7 @@ export default function ListingsGrid({
   const hasRestoredScroll = useRef(false)
 
   const NUM_COLUMNS = 3
-  const MEGA_BOOST_FREQUENCY = 4
+  const MEGA_BOOST_FREQUENCY = 9
 
   /* 🧠 SHUFFLE MEGA BOOSTS ONLY WHEN DATA CHANGES */
 
@@ -129,10 +129,9 @@ export default function ListingsGrid({
 
   /* ---------------- INSERT UPGRADE ROW ---------------- */
 
-  if (showUpgradeRow) {
-    const insertAt = Math.min(4, rows.length)
-    rows.splice(insertAt, 0, { type: "upgrade_row", id: "upgrade-row" })
-  }
+  if (showUpgradeRow && rows.length > 15) {
+  rows.splice(15, 0, { type: "upgrade_row", id: "upgrade-row" })
+}
 
   /* 🧠 RESTORE SCROLL POSITION */
 

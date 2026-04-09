@@ -59,6 +59,7 @@ export default function HomeScreen() {
   const [showAuthModal, setShowAuthModal] = useState(false)
 
   const [listings, setListings] = useState<Listing[]>([])
+  const [allListings, setAllListings] = useState<ListingRow[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [scrollOffset, setScrollOffset] = useState(0)
@@ -80,6 +81,18 @@ export default function HomeScreen() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [isPro, setIsPro] = useState(false)
   const [megaBoostListings, setMegaBoostListings] = useState<Listing[]>([])
+  const [page, setPage] = useState(0)
+const PAGE_SIZE = 25
+const [hasMore, setHasMore] = useState(true)
+const [loadingMore, setLoadingMore] = useState(false)
+
+useEffect(() => {
+  const threshold = 1000
+
+  if (scrollOffset > threshold && hasMore && !loadingMore) {
+    loadMoreListings()
+  }
+}, [scrollOffset, hasMore])
 
   const requireAuth = (action?: () => void) => {
     if (!session?.user) {
@@ -131,6 +144,17 @@ export default function HomeScreen() {
     }, [listings.length])
   )
 
+  useEffect(() => {
+  if (page === 0) return
+
+  const fetchMore = async () => {
+    await loadListings()
+    setLoadingMore(false)
+  }
+
+  fetchMore()
+}, [page])
+
   const loadListings = async () => {
     if (listings.length === 0) {
       setLoading(true)
@@ -176,13 +200,25 @@ export default function HomeScreen() {
         .eq("is_sold", false)
         .eq("is_removed", false)
         .order("created_at", { ascending: false })
-        .range(0, 24)
+        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
 
       if (error) throw error
 
       const rows = (data ?? []) as ListingRow[]
+      const newAllListings = Array.from(
+  new Map(
+    [...allListings, ...rows].map(item => [item.id, item])
+  ).values()
+)
 
-      const validRows = rows.filter(
+setAllListings(newAllListings)
+      if ((rows ?? []).length < PAGE_SIZE) {
+  setHasMore(false)
+} else {
+  setHasMore(true)
+}
+
+      const validRows = newAllListings.filter(
         (l) =>
           Array.isArray(l.image_urls) &&
           l.image_urls.length > 0 &&
@@ -273,8 +309,14 @@ export default function HomeScreen() {
       const uniqueListings = Array.from(
         new Map(normalized.map((item) => [item.id, item])).values()
       )
+       
+      setListings(prev => {
+  const merged = [...prev, ...uniqueListings]
 
-      setListings(uniqueListings)
+  return Array.from(
+    new Map(merged.map(item => [item.id, item])).values()
+  )
+})
 
       const normalizedMegaBoosts: Listing[] =
         activeMegaBoostRows.map((l) => ({
@@ -287,7 +329,13 @@ export default function HomeScreen() {
           shipping_type: l.shipping_type ?? null,
         }))
 
-      setMegaBoostListings(normalizedMegaBoosts)
+      setMegaBoostListings(prev => {
+  const merged = [...prev, ...normalizedMegaBoosts]
+
+  return Array.from(
+    new Map(merged.map(item => [item.id, item])).values()
+  )
+})
     } catch (err) {
       handleAppError(err, {
         fallbackMessage:
@@ -297,12 +345,21 @@ export default function HomeScreen() {
       setLoading(false)
     }
   }
+const loadMoreListings = async () => {
+  if (loadingMore || !hasMore) return
+
+  setLoadingMore(true)
+  setPage(prev => prev + 1)
+}
 
   const refreshListings = async () => {
-    setRefreshing(true)
-    await loadListings()
-    setRefreshing(false)
-  }
+  setRefreshing(true)
+  setPage(0)
+  setHasMore(true)
+  setAllListings([])
+  await loadListings()
+  setRefreshing(false)
+}
 
 const checkUnreadMessages = async () => {
   try {
@@ -516,6 +573,9 @@ onProfilePress={() =>
       megaBoostListings={megaBoostListings}
       onScrollOffsetChange={setScrollOffset}
     />
+    {loadingMore && (
+  <ActivityIndicator style={{ marginVertical: 20 }} />
+)}
   </>
 )}
 
