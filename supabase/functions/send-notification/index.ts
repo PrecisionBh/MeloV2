@@ -26,7 +26,7 @@ serve(async (req) => {
       return new Response("Missing fields", { status: 400 })
     }
 
-    /* ---------------- INSERT (SAFE) ---------------- */
+    /* ---------------- INSERT (IDEMPOTENT) ---------------- */
 
     console.log("📤 inserting notification")
 
@@ -35,63 +35,61 @@ serve(async (req) => {
       type,
       title,
       body,
-      data: {
-        ...data,
-        dedupeKey,
-      },
+      data,
+      dedupe_key: dedupeKey, // ✅ enforced at DB level
     })
 
-    if (error) {
-      // 🔥 CRITICAL: do NOT break on duplicate
-      if (error.code === "23505") {
-        console.log("🚫 duplicate notification blocked (expected)")
-      } else {
-        console.log("❌ real insert error:", error)
-      }
-    } else {
+    if (!error) {
       console.log("✅ notification inserted")
-    }
 
-    /* ---------------- PUSH ---------------- */
+      /* ---------------- PUSH (ONLY ON SUCCESS) ---------------- */
 
-    console.log("🔍 fetching profile for push")
+      console.log("🔍 fetching profile for push")
 
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("expo_push_token, notifications_enabled")
-      .eq("id", userId)
-      .single()
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("expo_push_token, notifications_enabled")
+        .eq("id", userId)
+        .single()
 
-    console.log("👤 profile:", profile, profileError)
+      console.log("👤 profile:", profile, profileError)
 
-    if (
-      profile?.expo_push_token &&
-      profile.notifications_enabled !== false
-    ) {
-      console.log("📡 sending push to:", profile.expo_push_token)
+      if (
+        profile?.expo_push_token &&
+        profile.notifications_enabled !== false
+      ) {
+        console.log("📡 sending push to:", profile.expo_push_token)
 
-      const pushRes = await fetch("https://exp.host/--/api/v2/push/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          to: profile.expo_push_token,
-          title,
-          body,
-          data,
-        }),
-      })
+        const pushRes = await fetch("https://exp.host/--/api/v2/push/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            to: profile.expo_push_token,
+            title,
+            body,
+            data,
+          }),
+        })
 
-      const pushJson = await pushRes.json()
-      console.log("📨 push response:", pushJson)
+        const pushJson = await pushRes.json()
+        console.log("📨 push response:", pushJson)
+      } else {
+        console.log("⚠️ no push token or notifications disabled")
+      }
+
+    } else if ((error as any).code === "23505") {
+      console.log("🚫 duplicate notification blocked (expected)")
     } else {
-      console.log("⚠️ no push token or notifications disabled")
+      console.log("❌ real insert error:", error)
+      return new Response("Insert failed", { status: 500 })
     }
 
     console.log("✅ send-notification COMPLETE")
 
     return new Response("OK", { status: 200 })
+
   } catch (err) {
     console.error("💥 FUNCTION CRASH:", err)
     return new Response("Error", { status: 500 })

@@ -432,19 +432,6 @@ serve(async (req) => {
   return json(200, { received: true })
 }
 
-if (event.type === "payment_intent.succeeded") {
-  const intent = event.data.object as Stripe.PaymentIntent
-  const orderId = intent.metadata?.order_id
-
-  if (!orderId) return json(200, { received: true })
-
-  return await markOrderPaid({
-    orderId,
-    paymentIntentId: intent.id,
-    amountTotal: intent.amount_received ?? null,
-  })
-}
-
 if (event.type === "payout.paid") {
   const payout = event.data.object as Stripe.Payout
   const stripePayoutId = payout.id
