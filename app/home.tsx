@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons"
 import { useFocusEffect, useRouter } from "expo-router"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
@@ -6,16 +5,23 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native"
 
-import FilterBar, { FilterKey, type FilterOption } from "../components/home/FilterBar"
-import HomeHeader from "../components/home/HomeHeader"
+import FilterBar, {
+  FilterKey,
+  type FilterOption,
+} from "../components/home/FilterBar"
 import ListingsGrid from "../components/home/ListingsGrid"
 import SearchBar from "../components/home/SearchBar"
+import SportFilterBar, {
+  SportKey,
+} from "../components/home/SportFilterBar"
+
+import GlobalFooter from "../components/layout/GlobalFooter"
+import GlobalHeader from "../components/layout/GlobalHeader"
 
 import { Listing } from "../components/home/ListingCard"
-import SportFilterBar, { SportKey } from "../components/home/SportFilterBar"
 import { useAuth } from "../context/AuthContext"
 import { handleAppError } from "../lib/errors/appError"
 import { SPORT_CATEGORY_MAP } from "../lib/sportCategories"
@@ -56,6 +62,7 @@ type ListingRow = {
 export default function HomeScreen() {
   const router = useRouter()
   const { session } = useAuth()
+
   const [showAuthModal, setShowAuthModal] = useState(false)
 
   const [listings, setListings] = useState<Listing[]>([])
@@ -65,10 +72,8 @@ export default function HomeScreen() {
   const [scrollOffset, setScrollOffset] = useState(0)
 
   const [search, setSearch] = useState("")
-
   const [activeSport, setActiveSport] =
     useState<SportKey>("all")
-
   const [activeCategory, setActiveCategory] =
     useState<FilterKey>("all")
 
@@ -80,19 +85,25 @@ export default function HomeScreen() {
 
   const [menuOpen, setMenuOpen] = useState(false)
   const [isPro, setIsPro] = useState(false)
-  const [megaBoostListings, setMegaBoostListings] = useState<Listing[]>([])
+  const [megaBoostListings, setMegaBoostListings] =
+    useState<Listing[]>([])
+
   const [page, setPage] = useState(0)
-const PAGE_SIZE = 25
-const [hasMore, setHasMore] = useState(true)
-const [loadingMore, setLoadingMore] = useState(false)
+  const PAGE_SIZE = 25
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
 
-useEffect(() => {
-  const threshold = 1000
+  useEffect(() => {
+    const threshold = 1000
 
-  if (scrollOffset > threshold && hasMore && !loadingMore) {
-    loadMoreListings()
-  }
-}, [scrollOffset, hasMore])
+    if (
+      scrollOffset > threshold &&
+      hasMore &&
+      !loadingMore
+    ) {
+      loadMoreListings()
+    }
+  }, [scrollOffset, hasMore])
 
   const requireAuth = (action?: () => void) => {
     if (!session?.user) {
@@ -103,35 +114,34 @@ useEffect(() => {
     action?.()
   }
 
-  /* ---------------- CATEGORY OPTIONS BY SPORT ---------------- */
+  /* ---------------- CATEGORY OPTIONS ---------------- */
 
   const categoryOptions = useMemo(() => {
-  if (activeSport === "all") {
-    return [
-      { key: "all", label: "All" },
-      { key: "cue", label: "Cue" },
-      { key: "case", label: "Case" },
-      { key: "shaft", label: "Shaft" },
-      { key: "apparel", label: "Apparel" },
-      { key: "accessories", label: "Accessories" },
-      { key: "collectibles", label: "Collectibles" },
-      { key: "other", label: "Other" },
-    ] satisfies FilterOption[] // ✅ KEY FIX
-  }
+    if (activeSport === "all") {
+      return [
+        { key: "all", label: "All" },
+        { key: "cue", label: "Cue" },
+        { key: "case", label: "Case" },
+        { key: "shaft", label: "Shaft" },
+        { key: "apparel", label: "Apparel" },
+        { key: "accessories", label: "Accessories" },
+        { key: "collectibles", label: "Collectibles" },
+        { key: "other", label: "Other" },
+      ] satisfies FilterOption[]
+    }
 
-  return (
-    SPORT_CATEGORY_MAP[activeSport] ??
-    [{ key: "all", label: "All" }]
-  ) as FilterOption[] // ✅ FORCE TRUST HERE
-}, [activeSport])
-
-  /* ---------------- RESET CATEGORY WHEN SPORT CHANGES ---------------- */
+    return (
+      SPORT_CATEGORY_MAP[activeSport] ?? [
+        { key: "all", label: "All" },
+      ]
+    ) as FilterOption[]
+  }, [activeSport])
 
   useEffect(() => {
     setActiveCategory("all")
   }, [activeSport])
 
-  /* ---------------- LOAD DATA ---------------- */
+  /* ---------------- INITIAL LOAD ---------------- */
 
   useFocusEffect(
     useCallback(() => {
@@ -145,15 +155,17 @@ useEffect(() => {
   )
 
   useEffect(() => {
-  if (page === 0) return
+    if (page === 0) return
 
-  const fetchMore = async () => {
-    await loadListings()
-    setLoadingMore(false)
-  }
+    const fetchMore = async () => {
+      await loadListings()
+      setLoadingMore(false)
+    }
 
-  fetchMore()
-}, [page])
+    fetchMore()
+  }, [page])
+
+  /* ---------------- LOAD LISTINGS ---------------- */
 
   const loadListings = async () => {
     if (listings.length === 0) {
@@ -174,17 +186,15 @@ useEffect(() => {
           .eq("follower_id", user.id)
 
         followedSellerIds =
-          followsData?.map((f: any) => f.following_id) ?? []
+          followsData?.map(
+            (f: any) => f.following_id
+          ) ?? []
 
-        const { data: proData, error: proErr } = await supabase
+        const { data: proData } = await supabase
           .from("profiles")
           .select("is_pro")
           .eq("id", user.id)
           .maybeSingle()
-
-        if (proErr) {
-          console.log("[HOME] is_pro fetch error:", proErr.message)
-        }
 
         setIsPro(proData?.is_pro === true)
       } else {
@@ -200,23 +210,27 @@ useEffect(() => {
         .eq("is_sold", false)
         .eq("is_removed", false)
         .order("created_at", { ascending: false })
-        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
+        .range(
+          page * PAGE_SIZE,
+          page * PAGE_SIZE + PAGE_SIZE - 1
+        )
 
       if (error) throw error
 
       const rows = (data ?? []) as ListingRow[]
-      const newAllListings = Array.from(
-  new Map(
-    [...allListings, ...rows].map(item => [item.id, item])
-  ).values()
-)
 
-setAllListings(newAllListings)
-      if ((rows ?? []).length < PAGE_SIZE) {
-  setHasMore(false)
-} else {
-  setHasMore(true)
-}
+      const newAllListings = Array.from(
+        new Map(
+          [...allListings, ...rows].map((item) => [
+            item.id,
+            item,
+          ])
+        ).values()
+      )
+
+      setAllListings(newAllListings)
+
+      setHasMore(rows.length === PAGE_SIZE)
 
       const validRows = newAllListings.filter(
         (l) =>
@@ -243,7 +257,8 @@ setAllListings(newAllListings)
       )
 
       const newRows = nonBoostedRows.filter(
-        (l) => !followedSellerIds.includes(l.user_id ?? "")
+        (l) =>
+          !followedSellerIds.includes(l.user_id ?? "")
       )
 
       const merged: ListingRow[] = []
@@ -258,33 +273,30 @@ setAllListings(newAllListings)
         nIndex < newRows.length
       ) {
         for (let i = 0; i < 3; i++) {
-          if (bIndex < boostedRows.length) {
+          if (bIndex < boostedRows.length)
             merged.push(boostedRows[bIndex++])
-          } else if (fIndex < followedRows.length) {
+          else if (fIndex < followedRows.length)
             merged.push(followedRows[fIndex++])
-          } else if (nIndex < newRows.length) {
+          else if (nIndex < newRows.length)
             merged.push(newRows[nIndex++])
-          }
         }
 
         for (let i = 0; i < 3; i++) {
-          if (fIndex < followedRows.length) {
+          if (fIndex < followedRows.length)
             merged.push(followedRows[fIndex++])
-          } else if (nIndex < newRows.length) {
+          else if (nIndex < newRows.length)
             merged.push(newRows[nIndex++])
-          } else if (bIndex < boostedRows.length) {
+          else if (bIndex < boostedRows.length)
             merged.push(boostedRows[bIndex++])
-          }
         }
 
         for (let i = 0; i < 3; i++) {
-          if (nIndex < newRows.length) {
+          if (nIndex < newRows.length)
             merged.push(newRows[nIndex++])
-          } else if (fIndex < followedRows.length) {
+          else if (fIndex < followedRows.length)
             merged.push(followedRows[fIndex++])
-          } else if (bIndex < boostedRows.length) {
+          else if (bIndex < boostedRows.length)
             merged.push(boostedRows[bIndex++])
-          }
         }
 
         if (
@@ -306,19 +318,15 @@ setAllListings(newAllListings)
         shipping_type: l.shipping_type ?? null,
       }))
 
-      const uniqueListings = Array.from(
-        new Map(normalized.map((item) => [item.id, item])).values()
+      setListings(
+        Array.from(
+          new Map(
+            normalized.map((item) => [item.id, item])
+          ).values()
+        )
       )
-       
-      setListings(prev => {
-  const merged = [...prev, ...uniqueListings]
 
-  return Array.from(
-    new Map(merged.map(item => [item.id, item])).values()
-  )
-})
-
-      const normalizedMegaBoosts: Listing[] =
+      setMegaBoostListings(
         activeMegaBoostRows.map((l) => ({
           id: l.id,
           title: l.title,
@@ -328,14 +336,7 @@ setAllListings(newAllListings)
           allow_offers: false,
           shipping_type: l.shipping_type ?? null,
         }))
-
-      setMegaBoostListings(prev => {
-  const merged = [...prev, ...normalizedMegaBoosts]
-
-  return Array.from(
-    new Map(merged.map(item => [item.id, item])).values()
-  )
-})
+      )
     } catch (err) {
       handleAppError(err, {
         fallbackMessage:
@@ -345,82 +346,81 @@ setAllListings(newAllListings)
       setLoading(false)
     }
   }
-const loadMoreListings = async () => {
-  if (loadingMore || !hasMore) return
 
-  setLoadingMore(true)
-  setPage(prev => prev + 1)
-}
+  const loadMoreListings = async () => {
+    if (loadingMore || !hasMore) return
+
+    setLoadingMore(true)
+    setPage((prev) => prev + 1)
+  }
 
   const refreshListings = async () => {
-  setRefreshing(true)
-  setPage(0)
-  setHasMore(true)
-  setAllListings([])
-  await loadListings()
-  setRefreshing(false)
-}
-
-const checkUnreadMessages = async () => {
-  try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      setHasUnreadMessages(false)
-      return
-    }
-
-    const { data, error } = await supabase
-      .from("messages")
-      .select("id")
-      .neq("sender_id", user.id) // 🔥 not your messages
-      .is("read_at", null)       // 🔥 unread
-      .limit(1)
-
-    if (error) throw error
-
-    setHasUnreadMessages((data ?? []).length > 0)
-  } catch (err) {
-    handleAppError(err, {
-      context: "check_unread_messages",
-    })
-    setHasUnreadMessages(false)
+    setRefreshing(true)
+    setPage(0)
+    setHasMore(true)
+    setAllListings([])
+    await loadListings()
+    setRefreshing(false)
   }
-}  
 
+  /* ---------------- UNREAD CHECKS ---------------- */
+
+  const checkUnreadMessages = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        setHasUnreadMessages(false)
+        return
+      }
+
+      const { data } = await supabase
+        .from("messages")
+        .select("id")
+        .neq("sender_id", user.id)
+        .is("read_at", null)
+        .limit(1)
+
+      setHasUnreadMessages(
+        (data ?? []).length > 0
+      )
+    } catch {
+      setHasUnreadMessages(false)
+    }
+  }
 
   const checkUnreadNotifications = async () => {
-  try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
-    if (!user) {
+      if (!user) {
+        setHasUnreadNotifications(false)
+        return
+      }
+
+      const { count } = await supabase
+        .from("notifications")
+        .select("id", {
+          count: "exact",
+          head: true,
+        })
+        .eq("user_id", user.id)
+        .eq("read", false)
+        .or("cleared.is.null,cleared.eq.false")
+
+      setHasUnreadNotifications(
+        (count ?? 0) > 0
+      )
+    } catch {
       setHasUnreadNotifications(false)
-      return
     }
-
-    const { count, error } = await supabase
-      .from("notifications")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("read", false)
-      .or("cleared.is.null,cleared.eq.false")
-
-    if (error) throw error
-
-    setHasUnreadNotifications((count ?? 0) > 0)
-  } catch (err) {
-    handleAppError(err, {
-      context: "check_unread_notifications",
-    })
-    setHasUnreadNotifications(false)
   }
-}
 
-  /* ---------------- FILTERING (FIXED & STABLE) ---------------- */
+  /* ---------------- FILTERED LISTINGS ---------------- */
 
   const filteredListings = useMemo(() => {
     let result = [...listings]
@@ -429,109 +429,46 @@ const checkUnreadMessages = async () => {
       const q = search.toLowerCase().trim()
 
       result = result.filter((l) => {
-        const title = (l.title ?? "").toLowerCase()
-        const category = (l.category ?? "").toLowerCase()
+        const title = (
+          l.title ?? ""
+        ).toLowerCase()
+        const category = (
+          l.category ?? ""
+        ).toLowerCase()
 
-        return title.includes(q) || category.includes(q)
+        return (
+          title.includes(q) ||
+          category.includes(q)
+        )
       })
     }
 
-    if (activeSport !== "all") {
-      const sportCategoryKeys = (
-        SPORT_CATEGORY_MAP[activeSport] ?? []
-      )
-        .map((item) => String(item.key).toLowerCase())
-        .filter((key) => key !== "all")
-
-      result = result.filter((l) => {
-        const cat = (l.category ?? "").toLowerCase()
-
-        if (sportCategoryKeys.includes(cat)) return true
-
-        if (
-          sportCategoryKeys.includes("cue") &&
-          (CUE_CATEGORIES.includes(cat) || cat.includes("cue"))
-        ) {
-          return true
-        }
-
-        if (
-          sportCategoryKeys.includes("case") &&
-          (CASE_CATEGORIES.includes(cat) || cat.includes("case"))
-        ) {
-          return true
-        }
-
-        return false
-      })
-    }
-
-    if (activeCategory === "all") {
-      return result
-    }
-
-    const active = (activeCategory ?? "").toLowerCase()
-
-    if (active === "case") {
-      return result.filter((l) => {
-        const cat = (l.category ?? "").toLowerCase()
-        return CASE_CATEGORIES.includes(cat) || cat.includes("case")
-      })
-    }
-
-    if (active === "cue") {
-      return result.filter((l) => {
-        const cat = (l.category ?? "").toLowerCase()
-        return CUE_CATEGORIES.includes(cat) || cat.includes("cue")
-      })
-    }
-
-    if (active === "other") {
-      const knownCategories = [
-        ...CUE_CATEGORIES,
-        ...CASE_CATEGORIES,
-        "shaft",
-        "apparel",
-        "accessories",
-        "collectibles",
-      ]
-
-      return result.filter((l) => {
-        const cat = (l.category ?? "").toLowerCase()
-        return !knownCategories.includes(cat)
-      })
-    }
-
-    return result.filter((l) => {
-      const cat = (l.category ?? "").toLowerCase()
-      return cat === active
-    })
-  }, [listings, activeCategory, activeSport, search])
-
-  const hasSearch = search.trim().length > 0
-const hasResults = filteredListings.length > 0
+    return result
+  }, [listings, search])
 
   /* ---------------- RENDER ---------------- */
 
   return (
     <>
       <View style={styles.screen}>
-        <View style={styles.headerBlock}>
-          <HomeHeader
-            hasUnreadNotifications={hasUnreadNotifications}
-            hasUnreadMessages={hasUnreadMessages}
-            onNotificationsPress={() =>
-  requireAuth(() => router.push("/notifications"))
-}
-onMessagesPress={() =>
-  requireAuth(() => router.push("/messages"))
-}
-onProfilePress={() =>
-  requireAuth(() => router.push("/profile"))
-}
-            onMenuPress={() => setMenuOpen(true)}
-          />
+        <GlobalHeader
+          cartCount={0}
+          notifCount={
+            hasUnreadNotifications ? 1 : 0
+          }
+          onNotificationsPress={() =>
+            requireAuth(() =>
+              router.push("/notifications")
+            )
+          }
+          onMessagesPress={() =>
+            requireAuth(() =>
+              router.push("/messages")
+            )
+          }
+        />
 
+        <View style={styles.filtersWrap}>
           <SearchBar
             value={search}
             onChange={setSearch}
@@ -551,188 +488,86 @@ onProfilePress={() =>
         </View>
 
         {loading ? (
-  <ActivityIndicator style={{ marginTop: 40 }} />
-) : (
-  <>
-    {search.trim().length > 0 && filteredListings.length === 0 && (
-      <View style={styles.noResultsWrap}>
-        <Text style={styles.noResultsTitle}>
-          No results for "{search}"
-        </Text>
-        <Text style={styles.noResultsSub}>
-          Showing featured listings instead
-        </Text>
-      </View>
-    )}
-
-    <ListingsGrid
-      listings={filteredListings}
-      refreshing={refreshing}
-      onRefresh={refreshListings}
-      showUpgradeRow={!isPro}
-      megaBoostListings={megaBoostListings}
-      onScrollOffsetChange={setScrollOffset}
-    />
-    {loadingMore && (
-  <ActivityIndicator style={{ marginVertical: 20 }} />
-)}
-  </>
-)}
-
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={() =>
-  requireAuth(() =>
-    router.push("/seller-hub/create-listing")
-  )
-}
-          activeOpacity={0.9}
-        >
-          <Ionicons name="add" size={20} color="#0F1E17" />
-          <Text style={styles.fabText}>Create Listing</Text>
-        </TouchableOpacity>
-      </View>
-
-      {menuOpen && (
-        <View style={styles.menuOverlay} pointerEvents="box-none">
-          <TouchableOpacity
-            style={styles.menuBackdrop}
-            activeOpacity={1}
-            onPress={() => setMenuOpen(false)}
+          <ActivityIndicator
+            style={{ marginTop: 40 }}
           />
-
-          <View style={styles.menuDropdown}>
-            <MenuItem
-              icon="albums-outline"
-              label="Buyer Hub"
-              onPress={() => {
-                setMenuOpen(false)
-                requireAuth(() => router.push("/buyer-hub"))
-              }}
+        ) : (
+          <>
+            <ListingsGrid
+              listings={filteredListings}
+              refreshing={refreshing}
+              onRefresh={refreshListings}
+              showUpgradeRow={!isPro}
+              megaBoostListings={
+                megaBoostListings
+              }
+              onScrollOffsetChange={
+                setScrollOffset
+              }
             />
 
-            <MenuDivider />
+            {loadingMore && (
+              <ActivityIndicator
+                style={{
+                  marginVertical: 20,
+                }}
+              />
+            )}
+          </>
+        )}
 
-            <MenuItem
-              icon="heart-outline"
-              label="My Likes"
+        <GlobalFooter cartCount={0} />
+      </View>
+
+      {showAuthModal && (
+        <View style={styles.authOverlay}>
+          <View style={styles.authModal}>
+            <Text style={styles.authTitle}>
+              Sign in to continue
+            </Text>
+
+            <TouchableOpacity
+              style={styles.authBtn}
               onPress={() => {
-                setMenuOpen(false)
-                requireAuth(() => router.push("/watching"))
+                setShowAuthModal(false)
+                router.push("/signinscreen")
               }}
-            />
+            >
+              <Text style={styles.authBtnText}>
+                Sign In
+              </Text>
+            </TouchableOpacity>
 
-            <MenuDivider />
-
-            <MenuItem
-              icon="briefcase-outline"
-              label="Seller Hub"
+            <TouchableOpacity
+              style={styles.authBtnOutline}
               onPress={() => {
-                setMenuOpen(false)
-                requireAuth(() => router.push("/seller-hub"))
+                setShowAuthModal(false)
+                router.push("/register")
               }}
-            />
+            >
+              <Text
+                style={
+                  styles.authBtnOutlineText
+                }
+              >
+                Create Account
+              </Text>
+            </TouchableOpacity>
 
-            <MenuDivider />
-
-            <MenuItem
-              icon="wallet-outline"
-              label="Wallet"
-              onPress={() => {
-                setMenuOpen(false)
-                requireAuth(() => router.push("/seller-hub/wallet"))
-              }}
-            />
-
-            <MenuDivider />
-
-            <MenuItem
-              icon="create-outline"
-              label="Edit Profile"
-              onPress={() => {
-                setMenuOpen(false)
-                requireAuth(() => router.push("/settings/edit-profile"))
-              }}
-            />
-
-            <MenuDivider />
-
-            <MenuItem
-              icon="settings-outline"
-              label="Settings"
-              onPress={() => {
-                setMenuOpen(false)
-                requireAuth(() => router.push("/settings"))
-              }}
-            />
+            <TouchableOpacity
+              onPress={() =>
+                setShowAuthModal(false)
+              }
+            >
+              <Text style={styles.authCancel}>
+                Not now
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
-
-      {showAuthModal && (
-  <View style={styles.authOverlay}>
-    <View style={styles.authModal}>
-      <Text style={styles.authTitle}>
-        Sign in to continue
-      </Text>
-
-      <TouchableOpacity
-        style={styles.authBtn}
-        onPress={() => {
-          setShowAuthModal(false)
-          router.push("/signinscreen")
-        }}
-      >
-        <Text style={styles.authBtnText}>Sign In</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.authBtnOutline}
-        onPress={() => {
-          setShowAuthModal(false)
-          router.push("/register")
-        }}
-      >
-        <Text style={styles.authBtnOutlineText}>
-          Create Account
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => setShowAuthModal(false)}>
-        <Text style={styles.authCancel}>Not now</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-)}
     </>
   )
-}
-
-/* ---------------- MENU COMPONENTS ---------------- */
-
-function MenuItem({
-  icon,
-  label,
-  onPress,
-}: {
-  icon: any
-  label: string
-  onPress: () => void
-}) {
-  return (
-    <TouchableOpacity
-      style={styles.menuItemRow}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <Ionicons name={icon} size={18} color="#0F1E17" />
-      <Text style={styles.menuItemText}>{label}</Text>
-    </TouchableOpacity>
-  )
-}
-
-function MenuDivider() {
-  return <View style={styles.menuDivider} />
 }
 
 /* ---------------- STYLES ---------------- */
@@ -741,154 +576,69 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#EAF4EF",
+    paddingBottom: 85,
   },
-  headerBlock: {
-    backgroundColor: "#7FAF9B",
+
+  filtersWrap: {
+    backgroundColor: "#FFFFFF",
     paddingBottom: 10,
   },
-  fab: {
-    position: "absolute",
-    bottom: 55,
-    left: 24,
-    right: 24,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: "#7FAF9B",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
-  fabText: {
-    fontSize: 15,
-    fontWeight: "900",
-    color: "#0F1E17",
-  },
-  menuOverlay: {
+
+  authOverlay: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 9999,
-    elevation: 9999,
-  },
-  menuBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.25)",
-  },
-  menuDropdown: {
-    position: "absolute",
-    top: 95,
-    left: 16,
-    width: 230,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    paddingVertical: 6,
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 24,
-    borderWidth: 1,
-    borderColor: "#E6EFEA",
-  },
-  menuItemRow: {
-    flexDirection: "row",
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
   },
-  menuItemText: {
-    fontSize: 15,
-    fontWeight: "700",
+
+  authModal: {
+    width: "85%",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    alignItems: "center",
+  },
+
+  authTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 16,
+  },
+
+  authBtn: {
+    width: "100%",
+    backgroundColor: "#7FAF9B",
+    padding: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+
+  authBtnText: {
     color: "#0F1E17",
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: "#EEF3F0",
-    marginHorizontal: 12,
+    fontWeight: "800",
   },
 
-  authOverlay: {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: "rgba(0,0,0,0.4)",
-  justifyContent: "center",
-  alignItems: "center",
-},
+  authBtnOutline: {
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "#7FAF9B",
+    padding: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
 
-authModal: {
-  width: "85%",
-  backgroundColor: "#fff",
-  borderRadius: 20,
-  padding: 20,
-  alignItems: "center",
-},
+  authBtnOutlineText: {
+    color: "#7FAF9B",
+    fontWeight: "800",
+  },
 
-authTitle: {
-  fontSize: 18,
-  fontWeight: "800",
-  marginBottom: 16,
-},
-
-authBtn: {
-  width: "100%",
-  backgroundColor: "#7FAF9B",
-  padding: 14,
-  borderRadius: 12,
-  alignItems: "center",
-  marginBottom: 10,
-},
-
-authBtnText: {
-  color: "#0F1E17",
-  fontWeight: "800",
-},
-
-authBtnOutline: {
-  width: "100%",
-  borderWidth: 1,
-  borderColor: "#7FAF9B",
-  padding: 14,
-  borderRadius: 12,
-  alignItems: "center",
-},
-
-authBtnOutlineText: {
-  color: "#7FAF9B",
-  fontWeight: "800",
-},
-
-authCancel: {
-  marginTop: 12,
-  color: "#999",
-},
-
-noResultsWrap: {
-  paddingHorizontal: 16,
-  paddingTop: 12,
-},
-
-noResultsTitle: {
-  fontSize: 16,
-  fontWeight: "700",
-  color: "#0F1E17",
-},
-
-noResultsSub: {
-  fontSize: 13,
-  color: "#6B7280",
-  marginTop: 4,
-},
-
+  authCancel: {
+    marginTop: 12,
+    color: "#999",
+  },
 })
